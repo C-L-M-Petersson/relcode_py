@@ -29,6 +29,7 @@ g_user_input_params_list = [
     "ecs_region_starting_point",
     "ecs_region_number_of_points",
     "ecs_end_imaginary_coordinate",
+    "path_to_first_photon_energy_input_list",
     "first_photon_energy_start",
     "first_photon_energy_end",
     "first_photon_step_fraction",
@@ -59,4 +60,5 @@ g_float_parameters = ["nuclear_charge_Z",
 
 g_string_parameters = ["path_to_output_folder",
                        "path_to_previous_output",
-                       "path_to_experimental_energies"]
+                       "path_to_experimental_energies",
+                       "path_to_first_photon_energy_input_list"]
