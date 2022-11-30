@@ -215,69 +215,19 @@ def create_knotpoint_sequence_and_box_parameters_file(parsed_vars_dict, generate
 #
 ##################################################################################################
 def create_photon_sequence_and_parameters_file(parsed_vars_dict, generated_input_path):
-    en_xuv_input_list_filename = parsed_vars_dict["path_to_first_photon_energy_input_list"]
-    num_photons = 0
-    start_omega_eV = 0
-    end_omega_eV   = 0
-    if en_xuv_input_list_filename != "0":
-        # This deals with the case where we store the first photon energies in a file
-
-        # Check that the file exists
-        file_exists = os.path.exists(en_xuv_input_list_filename)
-        if not file_exists:
-            print("FATAL ERROR: XUV energy file %s doesn't exist." % en_xuv_input_list_filename)
-            raise Exception("Invalid XUV energy file.")
-
-        with open(en_xuv_input_list_filename) as en_xuv_input_list_file:
-            i = 0
-
-            au_conversion_factor = 1
-            xuv_energies = []
-            for line in en_xuv_input_list_file:
-                # Remove comments
-                if line.find("#") != -1:
-                    line = line.split("#")[0]
-
-                # Remove newline
-                line = line.replace("\n","")
-
-                # Use the first word (if we will make the file more flexible in
-                # the future (associating a list of ir energies to one xuv
-                # energy), multiple words per line might be interesting.
-                if line.find(" ") != -1:
-                    line = line.split(" ")[0]
-
-                # Skip empty lines
-                if(len(line) == 0):
-                    continue
-
-                if(i == 0):
-                    if  (line == "eV"):
-                        au_conversion_factor = 1/g_eV_per_Hartree
-                    elif(line == "au"):
-                        au_conversion_factor = 1
-                    else:
-                        print("FATAL ERROR: "+line+" is not a valid unit of energy. Please select either eV or au.")
-                        raise Exception("Invalid unit of energy XUV energy file.")
-                else:
-                    xuv_energies.append(au_conversion_factor*float(line))
-
-                i+=1
-
-        photon_range_filename = generated_input_path + "/" + "photon_range.dat"
-        np.savetxt(photon_range_filename, xuv_energies, fmt='%1.13e')
-
-        start_omega_eV = min(xuv_energies) # We don't assume that these are ordered
-        end_omega_eV   = max(xuv_energies) # (although I see no reason for them not to be)
-        num_photons = len(xuv_energies)
-        # Might not make sense depending on the input data:
-        omega_IR_eV = parsed_vars_dict["second_photon_energy"]
-        omega_IR_au = omega_IR_eV/g_eV_per_Hartree
-        fraction    = round(omega_IR_au*num_photons/(end_omega_eV-start_omega_eV))
-    else:
+    en_input_list_filename = parsed_vars_dict["photon_energy_generation"]
+    num_xuv         = 0
+    num_ir          = 0
+    start_omega_eV  = 0
+    end_omega_eV    = 0
+    simulation_type = ""
+    if   en_input_list_filename == "0":
         # We compute the step size as delta_omega = omega_IR/fraction.
         # Note that we translate all input values to atomic units since this is what is appropriate
         # for the Fortran computations.
+        simulation_type = "RABITT"
+        num_ir = 2
+
         fraction = parsed_vars_dict["first_photon_step_fraction"]
         omega_IR_eV = parsed_vars_dict["second_photon_energy"]
         omega_IR_au = omega_IR_eV/g_eV_per_Hartree
@@ -311,31 +261,152 @@ def create_photon_sequence_and_parameters_file(parsed_vars_dict, generated_input
 
         total_photon_points = num_end_points-num_start_steps
 
-        photon_range_au = np.zeros(total_photon_points)
+        energies_au = [] #np.zeros(total_photon_points,3)
         for i in range(total_photon_points):
-            photon_range_au[i] = start_energy_au + i*delta_omega
-            #print("%1.13e" % photon_range_au[i])
+            energies_au.append([start_energy_au + i*delta_omega,-omega_IR_au,omega_IR_au])
+            #energies_au[i] = [start_energy_au + i*delta_omega]
+            #print("%1.13e" % energies_au[i])
 
-        photon_range_filename = generated_input_path + "/" + "photon_range.dat"
-        np.savetxt(photon_range_filename, photon_range_au, fmt='%1.13e')
-        #print("Wrote to %s" % photon_range_filename)
-        num_photons = len(photon_range_au)
+        photon_energy_filename = generated_input_path + "/" + "photon_energies.dat"
+        np.savetxt(photon_energy_filename, energies_au, fmt='%1.13e')
+        #print("Wrote to %s" % photon_energy_filename)
+        num_xuv = len(energies_au)
+    elif en_input_list_filename == "1":
+        simulation_type = "KRAKEN"
+        # We compute the step size as delta_omega = omega_IR/fraction.
+        # Note that we translate all input values to atomic units since this is what is appropriate
+        # for the Fortran computations.
+        num_ir = 1
+
+        omega_XUV_plus_IR_eV = parsed_vars_dict["total_photon_energy"]
+        omega_XUV_plus_IR_au = omega_XUV_plus_IR_eV/g_eV_per_Hartree
+
+        fraction = parsed_vars_dict["first_photon_step_fraction"]
+        omega_IR_eV = parsed_vars_dict["second_photon_energy"]
+        omega_IR_au = omega_IR_eV/g_eV_per_Hartree
+
+        delta_omega = omega_IR_au/fraction
+
+        start_omega_eV = parsed_vars_dict["first_photon_energy_start"]
+        end_omega_eV = parsed_vars_dict["first_photon_energy_end"]
+        in_start_omega_au = start_omega_eV/g_eV_per_Hartree
+        in_end_omega_au = end_omega_eV/g_eV_per_Hartree
+
+        # Compute start and end points adhering to step size delta_omega
+        tmp_start = 0.0
+        count = 0
+        while tmp_start < in_start_omega_au:
+            tmp_start += delta_omega
+            count += 1
+
+        # Go back one step for starting energy to assure we start slightly before selected energy.
+        start_energy_au = tmp_start - delta_omega
+        num_start_steps = count - 1  # Withdraw one count since we're taking one step back
+
+        tmp_end = 0.0
+        count = 0
+        while tmp_end < in_end_omega_au:
+            tmp_end += delta_omega
+            count += 1
+
+        # We will end up in one step above the chosen energy (or exactly hitting it)
+        num_end_points = count
+
+        total_photon_points = num_end_points-num_start_steps
+
+        energies_au = [] #np.zeros(total_photon_points,3)
+        for i in range(total_photon_points):
+            omega_XUV_au_tmp = start_energy_au + i*delta_omega
+            energies_au.append([omega_XUV_au_tmp,omega_XUV_plus_IR_au - omega_XUV_au_tmp])
+            #energies_au[i] = [start_energy_au + i*delta_omega]
+            #print("%1.13e" % energies_au[i])
+
+        photon_energy_filename = generated_input_path + "/" + "photon_energies.dat"
+        np.savetxt(photon_energy_filename, energies_au, fmt='%1.13e')
+        #print("Wrote to %s" % photon_energy_filename)
+        num_xuv = len(energies_au)
+    else:
+        # This deals with the case where we store the photon energies in a file
+        simulation_type = "Custom"
+
+        # Check that the file exists
+        file_exists = os.path.exists(en_input_list_filename)
+        if not file_exists:
+            print("FATAL ERROR: photon energy file %s doesn't exist." % en_input_list_filename)
+            raise Exception("Invalid photon energy file.")
+
+        num_ir = -1
+        with open(en_input_list_filename) as en_input_list_file:
+            i = 0
+
+            au_conversion_factor = 1
+            energies_au = []
+            for line in en_input_list_file:
+                # Remove comments
+                if line.find("#") != -1:
+                    line = line.split("#")[0]
+
+                # Remove newline
+                line = line.replace("\n","")
+
+                # Split into words
+                if line.find(" ") != -1:
+                    line = line.split(" ")
+
+                # Skip empty lines
+                if(len(line) == 0):
+                    continue
+                print(line)
+
+                if(i == 0):
+                    if  (line == "eV"):
+                        au_conversion_factor = 1/g_eV_per_Hartree
+                    elif(line == "au"):
+                        au_conversion_factor = 1
+                    else:
+                        print("FATAL ERROR: "+line+" is not a valid unit of energy. Please select either eV or au.")
+                        raise Exception("Invalid unit of photon energy file.")
+                else:
+                    energies_au.append([au_conversion_factor*float(x) for x in line])
+
+                if  (i   ==  0):
+                    pass
+                elif(num_ir == -1):
+                    num_ir = len(line)-1
+                elif(num_ir != len(line)-1):
+                    print("FATAL ERROR: photon energy file %s does not contain the same number of energies per line." % en_input_list_filename)
+                    raise Exception("Invalid photon energy file.")
+
+                i+=1
+
+        photon_energy_filename = generated_input_path + "/" + "photon_energies.dat"
+        np.savetxt(photon_energy_filename, energies_au, fmt='%1.13e')
+
+        start_omega_eV = min([es[0] for es in energies_au]) # We don't assume that these are ordered
+        end_omega_eV   = max([es[0] for es in energies_au]) # (although I see no reason for them not to be)
+        num_xuv        = len(energies_au)
+        # Might not make sense depending on the input data:
+        omega_IR_eV = parsed_vars_dict["second_photon_energy"]
+        omega_IR_au = omega_IR_eV/g_eV_per_Hartree
+        fraction    = round(omega_IR_au*num_xuv/(end_omega_eV-start_omega_eV))
 
 
     photon_params_filename = generated_input_path + "/" + "photon_parameters.input"
     file = open(photon_params_filename, "w")
 
-    write_integer_var_comment_and_value(file, "number of photons", num_photons)
-    write_integer_var_comment_and_value(file, "fraction of omega_IR for step size", fraction)
-    write_double_var_comment_and_value(file, "second_photon_energy (eV)", omega_IR_eV)
+    write_integer_var_comment_and_value(file, "number of first photon energies" , num_xuv)
+    write_integer_var_comment_and_value(file, "number of second photon energies", num_ir )
 
     file.close()
     #print("Wrote to %s" % photon_params_filename)
 
     print("\n")
-    print("For first photon interval between %.3f eV and %.3f eV, and a step size of omega_IR/%i,"
-          " we have %i points." % (start_omega_eV, end_omega_eV, fraction, num_photons))
-    print("omega_IR = %.3f" % omega_IR_eV)
+    print(simulation_type+" photon input data:")
+    print("For first photon interval between %.3f eV and %.3f eV, there are %i "
+          "ir energies for each of the %i xuv points."
+          % (start_omega_eV, end_omega_eV, num_ir, num_xuv))
+    if(simulation_type=="RABITT"): print("omega_IR = %.3f eV" % omega_IR_eV)
+    if(simulation_type=="KRAKEN"): print("omega_XUV+omega_IR = %.3f eV" % omega_XUV_plus_IR_eV)
     print("\n")
 
 def create_generation_complete_file_for_fortran_validation(generated_input_path):

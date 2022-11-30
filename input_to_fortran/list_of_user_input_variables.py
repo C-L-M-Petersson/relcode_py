@@ -29,11 +29,12 @@ g_user_input_params_list = [
     "ecs_region_starting_point",
     "ecs_region_number_of_points",
     "ecs_end_imaginary_coordinate",
-    "path_to_first_photon_energy_input_list",
+    "photon_energy_generation",
     "first_photon_energy_start",
     "first_photon_energy_end",
     "first_photon_step_fraction",
-    "second_photon_energy"
+    "second_photon_energy",
+    "total_photon_energy"
 ]
 
 # We define what types the parameters have for easy parsing conditions
@@ -56,9 +57,12 @@ g_float_parameters = ["nuclear_charge_Z",
                       "ecs_end_imaginary_coordinate",
                       "first_photon_energy_start",
                       "first_photon_energy_end",
-                      "second_photon_energy"]
+                      "second_photon_energy",
+                      "total_photon_energy"
+                      ]
 
 g_string_parameters = ["path_to_output_folder",
                        "path_to_previous_output",
                        "path_to_experimental_energies",
-                       "path_to_first_photon_energy_input_list"]
+                       "photon_energy_generation"
+                       ]
