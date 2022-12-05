@@ -276,10 +276,11 @@ def create_photon_sequence_and_parameters_file(parsed_vars_dict, generated_input
         # We compute the step size as delta_omega = omega_IR/fraction.
         # Note that we translate all input values to atomic units since this is what is appropriate
         # for the Fortran computations.
-        num_ir = 1
 
-        omega_XUV_plus_IR_eV = parsed_vars_dict["total_photon_energy"]
-        omega_XUV_plus_IR_au = omega_XUV_plus_IR_eV/g_eV_per_Hartree
+        omega_XUV_plus_IR_eVs = parsed_vars_dict["total_photon_energy"]
+        omega_XUV_plus_IR_aus = [o_eV/g_eV_per_Hartree for o_eV in omega_XUV_plus_IR_eVs]
+
+        num_ir = len(omega_XUV_plus_IR_aus)
 
         fraction = parsed_vars_dict["first_photon_step_fraction"]
         omega_IR_eV = parsed_vars_dict["second_photon_energy"]
@@ -317,9 +318,9 @@ def create_photon_sequence_and_parameters_file(parsed_vars_dict, generated_input
         energies_au = [] #np.zeros(total_photon_points,3)
         for i in range(total_photon_points):
             omega_XUV_au_tmp = start_energy_au + i*delta_omega
-            energies_au.append([omega_XUV_au_tmp,omega_XUV_plus_IR_au - omega_XUV_au_tmp])
-            #energies_au[i] = [start_energy_au + i*delta_omega]
-            #print("%1.13e" % energies_au[i])
+            energies_au_tmp  = [omega_XUV_plus_IR_au - omega_XUV_au_tmp for omega_XUV_plus_IR_au in omega_XUV_plus_IR_aus]
+            energies_au_tmp.insert(0,omega_XUV_au_tmp)
+            energies_au.append(energies_au_tmp)
 
         photon_energy_filename = generated_input_path + "/" + "photon_energies.dat"
         np.savetxt(photon_energy_filename, energies_au, fmt='%1.13e')
@@ -406,7 +407,12 @@ def create_photon_sequence_and_parameters_file(parsed_vars_dict, generated_input
           "ir energies for each of the %i xuv points."
           % (start_omega_eV, end_omega_eV, num_ir, num_xuv))
     if(simulation_type=="RABITT"): print("omega_IR = %.3f eV" % omega_IR_eV)
-    if(simulation_type=="KRAKEN"): print("omega_XUV+omega_IR = %.3f eV" % omega_XUV_plus_IR_eV)
+    if(simulation_type=="KRAKEN"):
+        if num_ir == 1:
+            e_final = parsed_vars_dict["total_photon_energy"]
+            print("omega_XUV+omega_IR = %.3f eV" % e_final[0])
+        else:
+            print("omega_XUV+omega_IR in {"+','.join([str(val)+"eV" for val in parsed_vars_dict["total_photon_energy"]])+"}")
     print("\n")
 
 def create_generation_complete_file_for_fortran_validation(generated_input_path):

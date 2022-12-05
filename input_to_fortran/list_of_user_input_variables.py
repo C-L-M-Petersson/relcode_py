@@ -38,31 +38,33 @@ g_user_input_params_list = [
 ]
 
 # We define what types the parameters have for easy parsing conditions
-g_bool_parameters = ["run_one_photon",
-                     "run_forward_only",
-                     "run_two_photons",
-                     "run_diagonalise",
-                     "write_diag_eigenvectors",
-                     "write_diag_coefficients",
-                     "write_binary_data_for_diag_extension"
-                     ]
+g_bool_parameters      = ["run_one_photon",
+                          "run_forward_only",
+                          "run_two_photons",
+                          "run_diagonalise",
+                          "write_diag_eigenvectors",
+                          "write_diag_coefficients",
+                          "write_binary_data_for_diag_extension"
+                         ]
 
-g_float_parameters = ["nuclear_charge_Z",
-                      "grid_start_point",
-                      "grid_end_point",
-                      "first_non_zero_point",
-                      "second_point_multiplier",
-                      "end_point_of_inner_region",
-                      "ecs_region_starting_point",
-                      "ecs_end_imaginary_coordinate",
-                      "first_photon_energy_start",
-                      "first_photon_energy_end",
-                      "second_photon_energy",
-                      "total_photon_energy"
-                      ]
+g_float_parameters     = ["nuclear_charge_Z",
+                          "grid_start_point",
+                          "grid_end_point",
+                          "first_non_zero_point",
+                          "second_point_multiplier",
+                          "end_point_of_inner_region",
+                          "ecs_region_starting_point",
+                          "ecs_end_imaginary_coordinate",
+                          "first_photon_energy_start",
+                          "first_photon_energy_end",
+                          "second_photon_energy"
+                         ]
 
-g_string_parameters = ["path_to_output_folder",
-                       "path_to_previous_output",
-                       "path_to_experimental_energies",
-                       "photon_energy_generation"
-                       ]
+g_floatlist_parameters = ["total_photon_energy"
+                         ]
+
+g_string_parameters    = ["path_to_output_folder",
+                          "path_to_previous_output",
+                          "path_to_experimental_energies",
+                          "photon_energy_generation"
+                         ]

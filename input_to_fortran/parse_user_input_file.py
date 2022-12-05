@@ -2,7 +2,7 @@ import numpy as np
 from itertools import islice  # Slicing when reading lines from Fortran files.
 from distutils.util import strtobool
 from input_to_fortran.list_of_user_input_variables import g_user_input_params_list, \
-    g_string_parameters, g_float_parameters, g_bool_parameters
+    g_string_parameters, g_float_parameters, g_floatlist_parameters, g_bool_parameters
 
 g_parsed_variables_dict = {}
 
@@ -33,6 +33,7 @@ def debug_line_parse(line, key, value):
 def parse_string_to_key_value_pair(line):
     global g_bool_parameters
     global g_float_parameters
+    global g_floatlist_parameters
     global g_string_parameters
     # This is the function that decides how
     key = ""
@@ -49,8 +50,10 @@ def parse_string_to_key_value_pair(line):
 
     # Value can be some different datatypes which we handle here.
     # Most will be integers.
-    if key_str in g_float_parameters:
+    if   key_str in g_float_parameters:
         value = float(val_str)
+    elif key_str in g_floatlist_parameters:
+        value = [float(x) for x in val_str.split(",")]
     elif key_str == "highest_occupied_orbital":
         val_str = val_str.strip(")")
         val_str = val_str.strip("(")
