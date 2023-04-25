@@ -22,8 +22,8 @@ from fortran_output_analysis.common_utility import kappa_from_l_and_j
 data_dir = "/home/jsorngard/Mirrors/atomlx04/Repo/relcode_examples/argon_example/full/"
 twophoton_data_dir = data_dir+"second_photon/"
 
-path_abs = twophoton_data_dir + "m_elements_abs_-2_2.dat"
-path_emi = twophoton_data_dir + "m_elements_emi_-2_2.dat"
+path_abs = twophoton_data_dir + "m_elements_eF2_-2_2.dat"
+path_emi = twophoton_data_dir + "m_elements_eF1_-2_2.dat"
 
 # Create instance of the TwoPhotons class.
 # The Fortran data can then be added (i.e loaded from file) to this instance.
@@ -48,8 +48,8 @@ print("l=1, j=3/2 -> kappa: ", kappa_from_l_and_j(l=1, j=3/2))  # Should be -2 f
 
 # To add the output from a different hole, in this case 3p1/2 we change the paths and kappa accordingly.
 # Note that we overwrite the path variables used previously, this is just a matter of convenience.
-path_abs = twophoton_data_dir + "m_elements_abs_1_2.dat"
-path_emi = twophoton_data_dir + "m_elements_emi_1_2.dat"
+path_abs = twophoton_data_dir + "m_elements_eF2_1_2.dat"
+path_emi = twophoton_data_dir + "m_elements_eF1_1_2.dat"
 
 # We can use the helper functions if we don't know the maps (l,j) <-> kappa by heart
 kappa_3p1half = kappa_from_l_and_j(l=1, j=1/2)

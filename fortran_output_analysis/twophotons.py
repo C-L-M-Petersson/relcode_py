@@ -157,16 +157,10 @@ class TwoPhotons:
     def add_matrix_elements(self, path, abs_or_emi, hole_kappa, hole_n):
 
         if (abs_or_emi == "abs"):
-            if (path.find("abs") == -1):
-                raise ValueError("Specified path not compliant with abs/emi convention! Got: path.find('abs') == -1")
-            else:
-                self.matrix_elements_abs[hole_kappa] = MatrixElements(path, hole_kappa, hole_n, abs_or_emi)
+            self.matrix_elements_abs[hole_kappa] = MatrixElements(path, hole_kappa, hole_n, abs_or_emi)
 
         elif (abs_or_emi == "emi"):
-            if (path.find("emi") == -1):
-                raise ValueError("Specified path not compliant with abs/emi convention! Got: path.find('emi') == -1")
-            else:
-                self.matrix_elements_emi[hole_kappa] = MatrixElements(path, hole_kappa, hole_n, abs_or_emi)
+            self.matrix_elements_emi[hole_kappa] = MatrixElements(path, hole_kappa, hole_n, abs_or_emi)
 
         else:
             raise ValueError("Need to specify emission ('emi') or absorption ('abs') when adding matrix elements data!")
@@ -223,7 +217,7 @@ class TwoPhotons:
                              hole_kappa, final_kappa))
         else:
             return retval, name
-    
+
 
     def get_coupled_matrix_element(self, hole_kappa, abs_or_emi, final_kappa, verbose=False):
         """Computes the value of the specified coupled matrix element.
@@ -262,7 +256,7 @@ class TwoPhotons:
 
                 #Compute the value of the matrix element
                 matrix_element = fortranM.raw_data_real[:,col_index] + 1j*fortranM.raw_data_imag[:,col_index]
-                
+
                 #Add in the short range phase from the fortran program
                 matrix_element *= np.exp(1j*phase_data[:,col_index])
 
@@ -271,14 +265,14 @@ class TwoPhotons:
                         print(f"{K=}, {hole_j=}, {intermediate_j=}, {final_j=} gives ", (2*K+1)*float(wigner_3j(1,1,K,0,0,0))*float(wigner_6j(1,1,K,hole_j,final_j,intermediate_j)))
                         #print(f"{K=}, {hole_j=}, {intermediate_j=}, {final_j=} gives ", phase(hole_j + final_j + K)*(2*K+1)*float(wigner_3j(1,1,K,0,0,0))*float(wigner_6j(1,1,K,hole_j,final_j,intermediate_j)))
                         print(f"The last point of this matrix element is {matrix_element[-1]}\n")
-                    
+
                     #Multiply by the prefactor and store it in the output matrix
                     coupled_matrix_element[K] += (2*K+1)*float(wigner_3j(1,1,K,0,0,0))*matrix_element*float(wigner_6j(1,1,K,hole_j,final_j,intermediate_j))
                     #coupled_matrix_element[K] += phase(hole_j + final_j + K)*(2*K+1)*float(wigner_3j(1,1,K,0,0,0))*matrix_element*float(wigner_6j(1,1,K,hole_j,final_j,intermediate_j))
-        
+
         if verbose:
             print(f"in the end the 100th point of the coupled matrix element for {final_kappa=} ends up as",coupled_matrix_element[:,100])
-        
+
         return [coupled_matrix_element[0], coupled_matrix_element[1], coupled_matrix_element[2]]
 
     def _raw_short_range_phase(self, abs_or_emi, hole_kappa):
@@ -295,11 +289,11 @@ class TwoPhotons:
 
         #Determine the name of the data file
         phase_file_name = "phase_" + abs_or_emi + f"_{hole_kappa}_{M.hole.n - l_from_kappa(hole_kappa)}.dat"
-        
+
         #Remove the string after the last "/" in the phase that points to the matrix element file
         #and replace it with the name of the phase data file
         phase_path = os.path.sep.join(M.path.split(os.path.sep)[:-1]) + os.path.sep + phase_file_name
-        
+
         raw_phase_data = np.loadtxt(phase_path)
 
         #Filter out all columns that are all zeros to make column index match with organization of matrix element data
@@ -338,7 +332,7 @@ def get_integrated_two_photon_cross_section(hole_kappa, M1, M2, abs_emi_or_cross
     The input (M1 and M2) are 5 element lists where each element is a 3 by energy_grid_points numpy array.
     These numbers come from there being 5 'possible' final kappa values for each initial kappa, and three possible
     values of K."""
-    
+
     if abs_emi_or_cross != "abs" and abs_emi_or_cross != "emi" and abs_emi_or_cross != "cross":
         raise ValueError(f"abs_emi_or_cross can only be 'abs', 'emi', or 'cross', not {abs_emi_or_cross}")
 
@@ -407,7 +401,7 @@ def get_two_photon_asymmetry_parameter(n, hole_kappa, M1, M2, abs_emi_or_cross, 
 
     if np.shape(M1[0]) != np.shape(M2[0]):
         raise ValueError("the matrix elements contain a different number of points")
-    
+
     energy_size = len(M1[0][1])
 
     #If the path to the coefficient files does not end in a path separator, add it.
@@ -447,7 +441,7 @@ def get_two_photon_asymmetry_parameter(n, hole_kappa, M1, M2, abs_emi_or_cross, 
                     #numerator += numerator_coeffs[kappa_2, kappa_1, K_1, K_2]*M[kappa_2][K_1]*np.conj(M[kappa_1][K_2])
                     #numerator += numerator_coeffs[kappa_1, kappa_2, K_2, K_1]*M[kappa_1][K_2]*np.conj(M[kappa_2][K_1])
                     #numerator += numerator_coeffs[kappa_2, kappa_1, K_2, K_1]*M[kappa_2][K_2]*np.conj(M[kappa_1][K_1])
-                    
+
                     #if kappa_1 == kappa_2 and K_1 == K_2:
                         #If it's a diagonal term we multiply the coefficient with the magnitue of the matrix element
                     #    numerator += numerator_coeffs[kappa_1, kappa_1, K_1, K_1]*M1[kappa_1][K_1]*np.conj(M2[kappa_1][K_1])
@@ -467,7 +461,7 @@ def get_two_photon_asymmetry_parameter(n, hole_kappa, M1, M2, abs_emi_or_cross, 
         values = parameter[~np.isnan(parameter)] #Filter out the nans first, as they mess up boolean expressions (nan is not itself).
         assert all(np.abs(np.imag(values)) < threshold), "The asymmetry parameter had a non-zero imaginary part when it shouldn't. Check the input matrix elements or change the threshold for the allowed size of the imaginary part"
         parameter = np.real(parameter)
-        
+
     if abs_emi_or_cross == "cross":
         abs_emi_or_cross = "complex"
     label = f"$\\beta_{n}^{{{abs_emi_or_cross}}}$"

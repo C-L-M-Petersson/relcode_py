@@ -1,0 +1,137 @@
+
+###########################################
+# Atomic system parameters
+###########################################
+
+nuclear_charge_Z         = 54            # For example 54 if xenon. Currently we support He,Ne,Ar,Kr,Xe,Rn, that is
+                                         # Z=2,10,18,36,54,86
+                                         # Support can be extended by modifying code in the relcode_py repo,
+                                         # if one wants to run for example closed-shell ions.
+                                         # If there is some problem with HF convergence one should double-check the list
+                                         # of generated orbitals.
+
+number_of_holes          = 5             # Holes included in ionisation, counting from the outermost orbital and inward.
+                                         # If we want to study xenon 4d for example, we want to have 5 holes. This would
+                                         # include 5p3/2, 5p1/2, 5s1/2, 4d5/2, 4d3/2. 
+
+last_kappa               = -5            # Must be at least the same as highest for occupied orbitals.
+                                         # When doing one- and two-photon ionisation we allow or restrict how
+                                         # much kappa can change after photon interaction. If we want to include something like
+                                         # 4d5/2 -> f7/2 -> g9/2, after two photons, this corresponds to 
+                                         # kappas changing as -3 -> -4 -> -5, so last_kappa would have to be -5.
+
+###########################################
+# Run parameters
+###########################################
+# By default the program will calculate Hartree-Fock description of the ground state without any interaction with light.
+# If there is a correct path specified for reading old data for the HF description the program will use that instead
+# of computing the ground state (see "File I/O parameters" below).
+# There is also the possibility of diagonalising the CIS hamiltonian instead of computing one-photon interaction (RRPAE).
+# Computing the interaction with the second photon is only possible after RRPAE (one photon) calculation, at the moment.
+
+run_one_photon      = true                # Compute perturbed wave function after XUV absorption
+                                          # Including many-electron effects to RRPAE-level by 
+                                          # solving system of linear equations.
+
+run_forward_only    = false               # If we only want to include the "forward" RRPAE diagrams.
+                                          # When run_forward_only is true and we are diagonalising this is equivalent to
+                                          # configuration interaction singles (CIS).
+
+run_two_photons     = false                # Compute interaction with the second photon (IR)
+
+run_diagonalise     = false               # NB: Diagonalisation happens before photon interaction and _should_
+                                          # preserve matrices after diagonalisation.
+
+write_diag_eigenvectors = false           # If eigenvectors from diagonalisation should be written to disk.
+                                          # This is done in a human readable way and takes up a lot of space for a big matrix.
+
+write_diag_coefficients = false            # This writes a file printing out the largest coefficients for each eigenvalue and
+                                          # channel. Typicall those coefficients contributing more than 10%
+
+###########################################
+# File I/O parameters
+###########################################
+path_to_output_folder          = /home/ljungdahl/relcode_examples/xenon_example/output_exp_en      # 
+                                              # Where all Fortran data will be saved.
+                                              # Data from previous runs will be backed up automatically in
+                                              # the same folder. This can be a specified path on the filesystem, or 'default'.
+                                              # If default it will be in a subfolder "output/" inside of the directory
+                                              # from which the input-generation script is called.
+                                              # (usually the same directory as this file).
+
+path_to_previous_output        = /home/ljungdahl/relcode_examples/xenon_example/output_exp_en      #             
+                                              # If this is a valid path to some previous output data the program
+                                              # will use previous results and not re-compute the ground state.
+                                              # Note that this relies on relevant simulation parameters
+                                              # being the same as for this previous results!
+                                              # Can be 0, default, or specified path on the filesystem
+
+path_to_experimental_energies  = /home/ljungdahl/relcode_examples/xenon_example/xenon_exp_en.dat            #
+                                              # Can be 0 or a path to a file containing a list of experimental ground state
+                                              # binding energies. If not zero the program will try to replace HF energies
+                                              # with experimental values. The file should be a single column with values
+                                              # in atomic units ordered in ascending binding energy.
+
+###########################################
+# Simulation box parameters
+###########################################
+bspline_order_k               = 8             # Order for the small component, large will be bspline_order_k-1.
+
+total_number_of_bsplines      = 243           # The same as the number of "physical" knotpoints.
+
+grid_start_point              = 0.0           # Start coordinate of radial grid
+
+grid_end_point                = 100.0         # End coord of radial grid (end of box).
+
+# The grid is divided into three regions that have different knotpoint distributions.
+# The first (inner) region has an exponential distribution. It starts at grid_start_point and ends at
+# end_point_of_first_region. We also set how many knotpoints there is in each region.
+# NB: We must have that the region points sum to the total number of bsplines, in the argon example 240 = 8+159+73
+# (input generation will throw an error otherwise). 
+
+first_non_zero_point                    = 0.00925    # radial coordinate, atomic units.
+                                                        # In this example ~ 0.5/Z a.u., with Z = 54.
+                                                        # For heavier atoms we want more knot points closer to
+                                                        # zero, in order to resolve higher bound states.
+                                                        # If this coordinate is greater than 0.5/Z you will get
+                                                        # a warning.
+ 
+second_point_multiplier        = 3   # Integer or real number. The second non-zero point is defined as 
+                                     # second_non_zero_point = second_point_multiplier * first_non_zero_point
+                                     # This is usually set to 3. The points after the first two are exponentially distributed
+                                     # up to the end point of the inner region.
+
+end_point_of_inner_region                      = 0.8                # atomic units
+
+inner_region_number_of_exponential_points      = 12                 #
+
+# Middle region has a linear distribution
+mid_region_number_of_linear_points             = 155                #
+
+# The last region is the ECS (exterior complex scaling) region.
+ecs_region_starting_point                      = 70.0               # atomic units 
+
+ecs_region_number_of_points                    = 76                 # The ECS points will smoothly transition from the linear
+                                                                    # distribution to a less dense distribution
+
+ecs_end_imaginary_coordinate                   = 5.0                # How far we go along the imaginary axis.
+                                                                    # This controls complex scaling angle. atomic units
+
+###########################################
+# Photon parameters
+###########################################
+# Since we often want to do RABBIT simulations the XUV photon step size is an even fraction of the second photon energy
+# (IR, which is constant). We specify start and end points, and the fraction for the step size.
+# The program will make sure that the range fits a number of points with the correct step size, which means 
+# that the actual start and end points after simulation will be slightly different than specified here.
+
+first_photon_energy_start                      = 80.0               # Specified in eV
+
+first_photon_energy_end                        = 82.0              #
+
+first_photon_step_fraction                     = 1                  # If we want delta_omega = omega_IR/4,
+                                                                    # then this should be 4.
+
+second_photon_energy                           = 1.55               # This is given in eV, and is constant over a run.
+                                                                    # Typically 1.55 eV for the RABBIT IR probe.
+
