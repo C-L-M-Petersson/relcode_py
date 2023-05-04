@@ -42,6 +42,8 @@ run_two_photons     = true                # Compute interaction with the second 
 run_diagonalise     = false               # NB: Diagonalisation happens before photon interaction and _should_
                                           # preserve matrices after diagonalisation.
 
+run_breit           = false               # Add Breit interaction.
+
 write_diag_eigenvectors = false           # If eigenvectors from diagonalisation should be written to disk.
                                           # This is done in a human readable way and takes up a lot of space for a big matrix.
 

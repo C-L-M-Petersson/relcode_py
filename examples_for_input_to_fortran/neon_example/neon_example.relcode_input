@@ -44,6 +44,8 @@ run_two_photons     = true                # Compute interaction with the second 
 run_diagonalise     = true                # NB: The diagonalisation with all RRPAE diagrams is not properly tested.
                                           # Forward only (CIS) diagonalisation works and is tested and should work.
 
+run_breit           = false               # Add Breit interaction.
+
 write_diag_eigenvectors = false           # If eigenvectors from diagonalisation should be written to disk.
                                           # This is done in a human readable way and takes up a lot of space for a big matrix.
 
