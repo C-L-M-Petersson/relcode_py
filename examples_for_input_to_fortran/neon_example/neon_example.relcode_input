@@ -34,23 +34,32 @@ run_one_photon      = true                # Compute perturbed wave function afte
                                           # Including many-electron effects to RRPAE-level by
                                           # solving system of linear equations.
 
+run_two_photons                = true      # Compute interaction with the second photon (IR)
 
-run_forward_only    = true               # If we only want to include the "forward" RRPAE diagrams.
-                                          # When run_forward_only is true and we are diagonalising this is equivalent to
-                                          # configuration interaction singles (CIS).
+run_forward_only               = true      # If we only want to include the "forward" RRPAE diagrams.
+                                           # When run_forward_only is true and we are diagonalising this is equivalent to
+                                           # configuration interaction singles (CIS).
 
-run_two_photons     = true                # Compute interaction with the second photon (IR)
+use_projected_potential        = true      # Whether or not to use a projected potential.
 
-run_diagonalise     = true                # NB: The diagonalisation with all RRPAE diagrams is not properly tested.
-                                          # Forward only (CIS) diagonalisation works and is tested and should work.
+projected_potential_hole_index = 1         # The index of the hole to use for the projected potential, counting from the outer-most orbital
 
-run_breit           = false               # Add Breit interaction.
+run_rpa_second_photon          = true      # Add RPAE diagrams for the second photon.
 
-write_diag_eigenvectors = false           # If eigenvectors from diagonalisation should be written to disk.
-                                          # This is done in a human readable way and takes up a lot of space for a big matrix.
+run_diagonalise_first_photon = true       # NB: Diagonalisation happens before photon interaction and _should_
+                                           # preserve matrices after diagonalisation.
 
-write_diag_coefficients = true            # This writes a file printing out the largest coefficients for each eigenvalue and
-                                          # channel. Typicall those coefficients contributing more than 10%
+run_diagonalise_second_photon  = false     # NB: Diagonalisation happens before photon interaction and _should_
+                                           # preserve matrices after diagonalisation.
+
+write_diag_eigenvectors        = false     # If eigenvectors from diagonalisation should be written to disk.
+                                           # This is done in a human readable way and takes up a lot of space for a big matrix.
+
+write_diag_coefficients        = false     # This writes a file printing out the largest coefficients for each eigenvalue and
+                                           # channel. Typicall those coefficients contributing more than 10%
+
+run_breit                      = false     # Add Breit interaction.
+
 
 ###########################################
 # File I/O parameters

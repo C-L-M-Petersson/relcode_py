@@ -75,6 +75,9 @@ def create_atom_parameters_file(parsed_vars_dict, generated_input_path):
     var = "last_kappa"
     write_integer_var_comment_and_value(file, var, parsed_vars_dict[var])
 
+    var = "projected_potential_hole_index"
+    write_integer_var_comment_and_value(file, var, parsed_vars_dict[var])
+
     # Write all the included orbitals in a sequence here
     write_string_to_file(file, "# Orbitals for atom (n, l, 2j, occupation number)")
     for orbital_tuple in list_of_orbital_tuples:
@@ -112,9 +115,6 @@ def create_run_parameters_file(parsed_vars_dict, generated_input_path):
         print("\nERROR! run_two_photons set to true while run_one_photon set to false.")
         print("two photons require one photon data.")
         raise Exception("Can't run two photons without running first photon calculation.")
-
-    if parsed_vars_dict["run_diagonalise"] and not parsed_vars_dict["run_forward_only"]:
-        print("\n WARNING! Diagonalisation of full RRPAE not fully tested!")
 
     file.close()
     #print("Wrote to %s" % filename)

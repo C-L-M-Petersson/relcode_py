@@ -30,31 +30,41 @@ last_kappa               = -5            # Must be at least the same as highest 
 # There is also the possibility of diagonalising the CIS hamiltonian instead of computing one-photon interaction (RRPAE).
 # Computing the interaction with the second photon is only possible after RRPAE (one photon) calculation, at the moment.
 
-run_one_photon      = true                # Compute perturbed wave function after XUV absorption
-                                          # Including many-electron effects to RRPAE-level by
-                                          # solving system of linear equations.
+run_one_photon                 = true      # Compute perturbed wave function after XUV absorption
+                                           # Including many-electron effects to RRPAE-level by
+                                           # solving system of linear equations.
 
-run_forward_only    = false               # If we only want to include the "forward" RRPAE diagrams.
-                                          # When run_forward_only is true and we are diagonalising this is equivalent to
-                                          # configuration interaction singles (CIS).
+run_two_photons                = true      # Compute interaction with the second photon (IR)
 
-run_two_photons     = true                # Compute interaction with the second photon (IR)
+run_forward_only               = false     # If we only want to include the "forward" RRPAE diagrams.
+                                           # When run_forward_only is true and we are diagonalising this is equivalent to
+                                           # configuration interaction singles (CIS).
 
-run_diagonalise     = true               # NB: The diagonalisation with all RRPAE diagrams is not properly tested.
-                                          # Forward only (CIS) diagonalisation works and is tested and should work.
+use_projected_potential        = true      # Whether or not to use a projected potential.
 
-run_breit           = false               # Add Breit interaction.
+projected_potential_hole_index = 1         # The index of the hole to use for the projected potential, counting from the outer-most orbital
 
-write_diag_eigenvectors = false           # If eigenvectors from diagonalisation should be written to disk.
-                                          # This is done in a human readable way and takes up a lot of space for a big matrix.
+run_rpa_second_photon          = true      # Add RPAE diagrams for the second photon.
 
-write_diag_coefficients = true            # This writes a file printing out the largest coefficients for each eigenvalue and
-                                          # channel. Typicall those coefficients contributing more than 10%
+run_diagonalise_first_photon = true       # NB: Diagonalisation happens before photon interaction and _should_
+                                           # preserve matrices after diagonalisation.
+
+run_diagonalise_second_photon  = false     # NB: Diagonalisation happens before photon interaction and _should_
+                                           # preserve matrices after diagonalisation.
+
+write_diag_eigenvectors        = false     # If eigenvectors from diagonalisation should be written to disk.
+                                           # This is done in a human readable way and takes up a lot of space for a big matrix.
+
+write_diag_coefficients        = true      # This writes a file printing out the largest coefficients for each eigenvalue and
+                                           # channel. Typicall those coefficients contributing more than 10%
+
+run_breit                      = false     # Add Breit interaction.
+
 
 ###########################################
 # File I/O parameters
 ###########################################
-path_to_output_folder          = default      #
+path_to_output_folder         = default       #
                                               # Where all Fortran data will be saved.
                                               # Data from previous runs will be backed up automatically in
                                               # the same folder. This can be a specified path on the filesystem, or 'default'.
