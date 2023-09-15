@@ -21,38 +21,38 @@ def gaussian( FWHM, E0, E ):
 # ==================================================================================================
 def density_matrix_pure_state( E_kins
                              , E_g
-                             , omegasData
-                             , data
+                             , omegas_mat_elems
+                             , mat_elems
                              , pulse = lambda x : 1
                              ):
     """Creates the density matrix for a pure state
     Arguments:
-        - E_kins     : [float]
+        - E_kins           : [float]
             The kinetic energy basis. The density matrix is linearly
             interpolated on this basis.
 
-        - E_g        : float
+        - E_g              : float
             The ground state energy, as given in hf_energies_kappa_$KAPPA.dat
 
-        - omegasData : [float]
+        - omegas_mat_elems : [float]
             The state one-photon photon energies, as given in omega.dat
 
-        - data       : [complex float]
-            The matrix elements, corresponding to the energies in omegasData
+        - mat_elems        : [complex float]
+            The matrix elements, corresponding to the energies in
+            omegas_mat_elems.
 
-        - pulse      : float -> float
+        - pulse            : float -> float
             The spectral pulse shape. If no value is given, the pulse is asumed
             to be one everywhere
     """
-    data_ = np.interp(E_kins-E_g, omegasData, data, left=0, right=0) \
-            * pulse(E_kins-E_g)
+    interpolated_mat_elems = np.interp( E_kins-E_g, omegas_mat_elems, mat_elems, left=0, right=0 ) * pulse( E_kins-E_g )
 
-    def density_matrix_col( y ):
-        return data_*np.conj( y )
+    def density_matrix_col( interpolated_mat_elem ):
+        return interpolated_mat_elems * np.conj( interpolated_mat_elem )
 
     rho = np.zeros((len(E_kins),len(E_kins)),dtype=complex)
-    for i in range(len(data_)):
-        rho[i] = density_matrix_col( data_[i] )
+    for i in range(len(interpolated_mat_elems)):
+        rho[i] = density_matrix_col( interpolated_mat_elems[i] )
 
     return rho
 
