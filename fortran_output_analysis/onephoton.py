@@ -36,7 +36,7 @@ class OnePhoton:
             path_to_phaseF_all = pert_path + "phaseF_all.dat"
         if path_to_phaseG_all is None:
             path_to_phaseG_all = pert_path + "phaseG_all.dat"
-        
+
         self.channels[hole_kappa] = Channels(path_to_pcur_all, path_to_amp_all, path_to_phaseF_all, path_to_phaseG_all, hole_kappa, n_qn)
         self.num_channels += 1
 
@@ -111,9 +111,9 @@ def final_kappas(hole_kappa, only_reachable=True):
     a list of three elements, even if one of them is 0."""
     mag = np.abs(hole_kappa)
     sig = np.sign(hole_kappa)
-    
+
     kappas = [sig*(mag-1), -sig*mag, sig*(mag+1)]
-    
+
     if only_reachable:
         #Filter out any occurence of final kappa = 0
         kappas = [kappa for kappa in kappas if kappa != 0]
@@ -144,7 +144,7 @@ class Channels:
         # if kappa = 0 the channel is closed.
 #       sort_kappas_idx = np.argsort(np.abs(possible_final_kappas))
 #       possible_final_kappas = possible_final_kappas[sort_kappas_idx]
-        
+
         #This code should reproduce the previous implementation
         possible_final_kappas = final_kappas(kappa_hole, only_reachable=False)
 
@@ -252,7 +252,7 @@ class ChannelsOld:
 
 def get_integrated_one_photon_cross_section(hole_kappa, M1, M2, abs_emi_or_cross, path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "formula_coefficients","one_photon","integrated_intensity"), threshold=1e-10):
     """This function returns the value of the integrated cross section for a photoelectron that has absorbed one photon"""
-    
+
     if abs_emi_or_cross != "abs" and abs_emi_or_cross != "emi" and abs_emi_or_cross != "cross":
         raise ValueError(f"abs_emi_or_cross can only be 'abs', 'emi', or 'cross', not {abs_emi_or_cross}")
 

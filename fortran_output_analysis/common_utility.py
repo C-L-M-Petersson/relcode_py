@@ -215,9 +215,9 @@ def coulomb_phase(kappa, energy, Z, use_relativistic_wavenumber=True):
 
     x = Z/k
     b = np.angle(gamma(l + 1 - 1j*x))
-    
+
     return b - l*np.pi/2
-    
+
 
 def wavenumber(energy):
     """Returns the relativistic wave number (k-value)."""
@@ -251,3 +251,20 @@ def convert_rate_to_cross_section(rates, omegas, divide=True):
 
         i+=1
     return cross_sections
+
+
+def ground_state_energy( data_dir, kappa, n ):
+    """Loads the ground state energy.
+    Arguments:
+        - data_dir : str
+            The fortran output directory.
+
+        - kappa    : int
+            The relativistic quantum number.
+
+        - n        : int
+            The principal quantum number.
+    """
+    hf_file = data_dir+"hf_wavefunctions/hf_energies_kappa_"+str(kappa)+".dat"
+
+    return [float(l.split()[0]) for l in open(hf_file,"r").readlines() ][n-1]

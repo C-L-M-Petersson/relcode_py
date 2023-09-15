@@ -41,7 +41,7 @@ class MatrixElements:
     # hole - intermediate - final
     # It also handles the summation over intermediate states required
     # for a "measurable" description of the channel.
-    def __init__(self, path, hole_kappa, hole_n, abs_or_emi):
+    def __init__(self, path, hole_kappa, hole_n, abs_or_emi, verbose=False):
         self.is_initialised = False
         self.path = path
         self.hole = IonHole(hole_kappa, hole_n)
@@ -78,8 +78,9 @@ class MatrixElements:
 
         self.name = self.hole.name + " " + abs_or_emi_string + " matrix elements."
 
-        print("Added:")
-        print(self.name)
+        if verbose:
+            print("Added:")
+            print(self.name)
         self.is_initialised = True
 
     def get_ionisation_path(self, intermediate_kappa, final_kappa):
