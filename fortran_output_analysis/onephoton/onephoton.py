@@ -30,6 +30,7 @@ class Channels:
         hole_kappa,
         n_qn,
         binding_energy,
+        g_omega_IR,
     ):
         self.path_to_pcur = path_to_pcur
         self.hole = IonHole(hole_kappa, n_qn, binding_energy)
@@ -39,6 +40,7 @@ class Channels:
         self.raw_phaseF_data = load_raw_data(path_to_phaseF_all)
         self.raw_phaseG_data = load_raw_data(path_to_phaseG_all)
         self.add_final_states()
+        self.g_omega_IR = g_omega_IR  # frequncy of the IR photon (in Hartree)
 
     def add_final_states(self):
         kappa_hole = self.hole.kappa
@@ -104,6 +106,7 @@ class OnePhoton:
         hole_kappa,
         n_qn,
         binding_energy,
+        g_omega_IR,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
@@ -119,6 +122,7 @@ class OnePhoton:
                 hole_kappa,
                 n_qn,
                 binding_energy,
+                g_omega_IR,
                 path_to_amp_all=path_to_amp_all,
                 path_to_phaseF_all=path_to_phaseF_all,
                 path_to_phaseG_all=path_to_phaseG_all,
@@ -143,7 +147,7 @@ class OnePhoton:
 
         retrial_number = 0
         while (answer != "yes") and (answer != "no"):
-            if retrial_number == 3:
+            if retrial_number >= 3:
                 raise RuntimeError("The maximum number of retrials exceeded!")
             answer = input("Invalid answer, type Yes or No:")
             answer = answer.strip().lower()
@@ -157,6 +161,7 @@ class OnePhoton:
         hole_kappa,
         n_qn,
         binding_energy,
+        g_omega_IR,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
@@ -181,6 +186,7 @@ class OnePhoton:
             hole_kappa,
             n_qn,
             binding_energy,
+            g_omega_IR,
         )
         self.num_channels += 1
 
