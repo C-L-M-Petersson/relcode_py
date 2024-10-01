@@ -11,6 +11,9 @@ from scipy.constants import fine_structure
 import glob
 import json
 from scipy.interpolate import InterpolatedUnivariateSpline as interp
+from fortran_output_analysis.constants_and_parameters import (
+    g_inverse_atomic_frequency_to_attoseconds,
+)
 
 
 # ==================================================================================================
@@ -65,7 +68,7 @@ class IonHole:
         self.name = (
             str(self.n) + l_to_str(self.l) + ("_{%i/2}" % (j_from_kappa_int(kappa)))
         )
-        self.binding_energy = binding_energy
+        self.binding_energy = binding_energy  # in Hartree
 
 
 # ==================================================================================================
@@ -281,3 +284,17 @@ def ground_state_energy(data_dir, kappa, n):
     hf_file = data_dir + "hf_wavefunctions/hf_energies_kappa_" + str(kappa) + ".dat"
 
     return [float(l.split()[0]) for l in open(hf_file, "r").readlines()][n - 1]
+
+
+def delay_to_phase(delay, g_omega_IR):
+    return delay * 2.0 * g_omega_IR / g_inverse_atomic_frequency_to_attoseconds
+
+
+def unwrap_phase_with_nans(phase):
+    """Unwraps a phase that contains NaN values by masking out the NaNs."""
+
+    # np.unwrap can not handle NaNs, mask them out.
+    nanmask = np.logical_not(np.isnan(phase))
+    phase[nanmask] = np.unwrap(phase[nanmask])
+
+    return phase
