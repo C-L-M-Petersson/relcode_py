@@ -432,7 +432,7 @@ class OnePhotonAnalyzer:
 
         return M * np.exp(1j * coul_phase)
 
-    def get_wigner_intensity(
+    def _get_wigner_intensity(
         self,
         hole_kappa,
         M_emi,
@@ -490,7 +490,7 @@ class OnePhotonAnalyzer:
 
         return wigner_intensity
 
-    def get_one_photon_asymmetry_parameter(
+    def _get_one_photon_asymmetry_parameter(
         self,
         hole_kappa,
         M1,
@@ -628,7 +628,7 @@ class OnePhotonAnalyzer:
         ekin_eV = self.get_electron_kinetic_energy_eV(hole_kappa)
         M = self.get_matrix_elements_with_coulomb_phase(hole_kappa, Z)
 
-        b2_real, _ = self.get_one_photon_asymmetry_parameter(
+        b2_real, _ = self._get_one_photon_asymmetry_parameter(
             hole_kappa, M, M, "abs"
         )  # one-photon real assymetry parameter
 
@@ -942,7 +942,7 @@ class OnePhotonAnalyzer:
         tau_int_wigner - array with integrated Wigner delay
         """
 
-        wigner_intensity = self.get_wigner_intensity(
+        wigner_intensity = self._get_wigner_intensity(
             hole_kappa, M_emi_shifted, M_abs_shifted
         )
 
@@ -973,7 +973,7 @@ class OnePhotonAnalyzer:
         tau_ang_wigner - array with angular part of Wigner delay
         """
 
-        b2_complex, _ = self.get_one_photon_asymmetry_parameter(
+        b2_complex, _ = self._get_one_photon_asymmetry_parameter(
             hole_kappa, M_emi_shifted, M_abs_shifted, "cross"
         )  # complex assymetry parameter for one photon case
 

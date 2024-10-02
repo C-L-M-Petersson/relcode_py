@@ -228,7 +228,7 @@ class OnePhoton:
         If a user wants to reinitialize, returns True. Otherwise, returns False.
         """
 
-        print(f"The hole with kappa {hole_kappa} is already initialized.")
+        print(f"The hole {self.channels[hole_kappa].hole.name} is already initialized.")
         answer = input("Do you want to reinitialize? (Type: Yes/No):")
         answer = answer.strip().lower()
 
