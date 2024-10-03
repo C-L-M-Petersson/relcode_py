@@ -211,7 +211,7 @@ class OnePhoton:
 
         return (n_qn, hole_kappa) in self.channels
 
-    def __assert_hole_initialization(self, n_qn, hole_kappa):
+    def assert_hole_initialization(self, n_qn, hole_kappa):
         """
         Assertion of the hole initialization.
 
@@ -275,6 +275,21 @@ class OnePhoton:
         )
         self.num_channels += 1
 
+    def assert_final_kappa(self, n_qn, hole_kappa, final_kappa):
+        """
+        Assertion of the final state. Checks if the given final state
+        is within possible ionization channels for the given hole.
+
+        Params:
+        n_qn - principal quantum number of the initial hole
+        hole_kappa - kappa value of the hole
+        final_kappa - kappa value of the final state
+        """
+
+        assert self.one_photon.check_final_kappa(
+            n_qn, hole_kappa, final_kappa
+        ), f"The final state with kappa {final_kappa} is not within channels for {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}!"
+
     def check_final_kappa(self, n_qn, hole_kappa, final_kappa):
         """
         Checks if the given final state is within ionization channels of the given initial hole.
@@ -288,7 +303,7 @@ class OnePhoton:
         True if the final state is within ionization channels, False otherwise.
         """
 
-        self.__assert_hole_initialization(n_qn, hole_kappa)
+        self.assert_hole_initialization(n_qn, hole_kappa)
 
         channel = self.channels[(n_qn, hole_kappa)]
 
@@ -306,7 +321,7 @@ class OnePhoton:
         channel_labels - list with labels of all ionization channels
         """
 
-        self.__assert_hole_initialization(n_qn, hole_kappa)
+        self.assert_hole_initialization(n_qn, hole_kappa)
 
         channel_labels = []
         channel = self.channels[(n_qn, hole_kappa)]
