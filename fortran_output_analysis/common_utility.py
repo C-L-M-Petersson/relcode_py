@@ -65,10 +65,26 @@ class IonHole:
         self.n = n_qn  # n quantum number (principal)
         self.l = l_from_kappa(kappa)
         self.j = j_from_kappa(kappa)
-        self.name = (
-            str(self.n) + l_to_str(self.l) + ("_{%i/2}" % (j_from_kappa_int(kappa)))
-        )
+        self.name = construct_hole_name(n_qn, kappa)
         self.binding_energy = binding_energy  # in Hartree
+
+
+def construct_hole_name(n_qn, hole_kappa):
+    """
+    Constructs a readable name for the hole with given parameters.
+
+    Params:
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
+
+    Returns:
+    name - readable name of the hole
+    """
+    l = l_from_kappa(hole_kappa)
+    j_int = j_from_kappa_int(hole_kappa)
+    name = str(n_qn) + l_to_str(l) + ("_{%i/2}" % (j_int))
+
+    return name
 
 
 # ==================================================================================================

@@ -8,6 +8,7 @@ from fortran_output_analysis.common_utility import (
     IonHole,
     load_raw_data,
     l_to_str,
+    construct_hole_name,
 )
 
 
@@ -159,6 +160,7 @@ class OnePhoton:
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
+        should_reinitialize=False,
     ):
         """
         Initializes a hole and adds corresponding ionization channels.
@@ -174,13 +176,16 @@ class OnePhoton:
         of the wave function
         path_to_phaseG_all - path to file with the phase for smaller relativistic component
         of the wave function
+        should_reinitialize - tells whether we should reinitialize if the hole was previously
+        initialized
         """
-        is_initialized = self.is_initialized(hole_kappa)
-        should_reinitialize = True
-        if is_initialized:
-            should_reinitialize = self.__should_reinitialize(hole_kappa)
+        is_initialized = self.is_initialized(n_qn, hole_kappa)
 
         if not is_initialized or should_reinitialize:
+            if is_initialized and should_reinitialize:
+                print(
+                    f"Reinitialize {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}."
+                )
             self._add_hole_and_channels(
                 path_to_pcur_all,
                 hole_kappa,
@@ -192,55 +197,32 @@ class OnePhoton:
                 path_to_phaseG_all=path_to_phaseG_all,
             )
 
-    def is_initialized(self, hole_kappa):
+    def is_initialized(self, n_qn, hole_kappa):
         """
         Checks if the hole is initialized (contained in self.channels)
 
         Params:
+        n_qn - principal quantum number of the hole
         hole_kappa - kappa value of the hole
 
         Returns:
         True if initialized, False otherwise.
         """
 
-        return hole_kappa in self.channels
+        return (n_qn, hole_kappa) in self.channels
 
-    def __assert_hole_initialization(self, hole_kappa):
+    def __assert_hole_initialization(self, n_qn, hole_kappa):
         """
         Assertion of the hole initialization.
 
         Params:
+        n_qn - principal quantum number of the hole
         hole_kappa - kappa value of the hole
         """
 
         assert self.is_initialized(
-            hole_kappa
-        ), f"The hole with kappa {hole_kappa} is not initialized!"
-
-    def __should_reinitialize(self, hole_kappa):
-        """
-        Asks if the hole sould be reinitialized.
-
-        Params:
-        hole_kappa - kappa value of the hole
-
-        Returns:
-        If a user wants to reinitialize, returns True. Otherwise, returns False.
-        """
-
-        print(f"The hole {self.channels[hole_kappa].hole.name} is already initialized.")
-        answer = input("Do you want to reinitialize? (Type: Yes/No):")
-        answer = answer.strip().lower()
-
-        retrial_number = 0
-        while (answer != "yes") and (answer != "no"):
-            if retrial_number >= 3:
-                raise RuntimeError("The maximum number of retrials exceeded!")
-            answer = input("Invalid answer, type Yes or No:")
-            answer = answer.strip().lower()
-            retrial_number += 1
-
-        return True if answer == "yes" else False
+            n_qn, hole_kappa
+        ), f"The hole {construct_hole_name(n_qn, hole_kappa)} in {self.name} is not initialized!"
 
     def _add_hole_and_channels(
         self,
@@ -281,7 +263,7 @@ class OnePhoton:
         if path_to_phaseG_all is None:
             path_to_phaseG_all = pert_path + "phaseG_all.dat"
 
-        self.channels[hole_kappa] = Channels(
+        self.channels[(n_qn, hole_kappa)] = Channels(
             path_to_pcur_all,
             path_to_amp_all,
             path_to_phaseF_all,
@@ -293,36 +275,41 @@ class OnePhoton:
         )
         self.num_channels += 1
 
-    def check_final_kappa(self, hole_kappa, final_kappa):
+    def check_final_kappa(self, n_qn, hole_kappa, final_kappa):
         """
         Checks if the given final state is within ionization channels of the given initial hole.
 
         Params:
+        n_qn - principal quantum number of the initial hole
         hole_kappa - kappa value of the initial hole
         final_kappa - kappa value of the final state
 
         Returns:
         True if the final state is within ionization channels, False otherwise.
         """
-        self.__assert_hole_initialization(hole_kappa)
 
-        channel = self.channels[hole_kappa]
+        self.__assert_hole_initialization(n_qn, hole_kappa)
+
+        channel = self.channels[(n_qn, hole_kappa)]
 
         return final_kappa in channel.final_states
 
-    def get_channel_labels_for_hole(self, hole_kappa):
+    def get_channel_labels_for_hole(self, n_qn, hole_kappa):
         """
         Constructs labels for all ionization channels of the given hole.
 
         Params:
+        n_qn - principal quantum number of the hole
         hole_kappa - kappa value of the hole
 
         Returns:
         channel_labels - list with labels of all ionization channels
         """
 
+        self.__assert_hole_initialization(n_qn, hole_kappa)
+
         channel_labels = []
-        channel = self.channels[hole_kappa]
+        channel = self.channels[(n_qn, hole_kappa)]
         hole_name = channel.hole.name
         for final_state_key in channel.final_states.keys():
             final_state = channel.final_states[final_state_key]
