@@ -140,6 +140,9 @@ class Channels:
         return kappas
 
 
+# TODO: probabily rewrite OnePhoton initialization so that it takes IonHole object as input
+
+
 class OnePhoton:
     """
     Initializes holes for one photon case and reads raw data from the Fortran output.
@@ -286,7 +289,7 @@ class OnePhoton:
         final_kappa - kappa value of the final state
         """
 
-        assert self.one_photon.check_final_kappa(
+        assert self.check_final_kappa(
             n_qn, hole_kappa, final_kappa
         ), f"The final state with kappa {final_kappa} is not within channels for {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}!"
 
