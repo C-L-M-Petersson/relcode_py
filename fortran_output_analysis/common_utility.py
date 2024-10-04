@@ -59,7 +59,7 @@ def get_one_photon_directory_metadata(data_dir):
 # ==================================================================================================
 #
 # ==================================================================================================
-class IonHole:
+class Hole:
     def __init__(self, kappa, n_qn, binding_energy):
         self.kappa = kappa
         self.n = n_qn  # n quantum number (principal)

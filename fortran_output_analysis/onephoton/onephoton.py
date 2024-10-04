@@ -5,10 +5,9 @@ from fortran_output_analysis.common_utility import (
     l_from_kappa,
     j_from_kappa,
     j_from_kappa_int,
-    IonHole,
+    Hole,
     load_raw_data,
     l_to_str,
-    construct_hole_name,
 )
 
 
@@ -42,9 +41,7 @@ class Channels:
         path_to_amp_all,
         path_to_phaseF_all,
         path_to_phaseG_all,
-        hole_kappa,
-        n_qn,
-        binding_energy,
+        hole: Hole,
         g_omega_IR,
     ):
         """
@@ -55,14 +52,13 @@ class Channels:
         of the wave function
         path_to_phaseG_all - path to file with the phase for smaller relativistic component
         of the wave function
-        hole_kappa - kappa value of the hole
-        n_qn - principal quantum number of the hole
+        hole - object of the Hole class containing hole's parameters
         binding_energy - binding energy of the hole
         g_omega_IR - energy of IR photon used in Fortaran simulations (in Hartree units)
         """
 
         self.path_to_pcur = path_to_pcur
-        self.hole = IonHole(hole_kappa, n_qn, binding_energy)
+        self.hole = hole
         self.final_states = {}
         self.raw_data = load_raw_data(path_to_pcur)
         self.raw_amp_data = load_raw_data(path_to_amp_all)
@@ -140,31 +136,29 @@ class Channels:
         return kappas
 
 
-# TODO: probabily rewrite OnePhoton initialization so that it takes IonHole object as input
-
-
 class OnePhoton:
     """
-    Initializes holes for one photon case and reads raw data from the Fortran output.
+    Loads raw Fortran data in the one photon case. Contains methods to check
+    if the data was loaded.
     """
 
     def __init__(self, atom_name):
         # attributes for diag data
         self.diag_eigenvalues = np.array([])
         self.diag_matrix_elements = np.array([])
-        self.__diag_initialized = False
+        self.__diag_loaded = False  # tells whether diagonal data was loaded
 
         # attributes for holes' data
         self.name = atom_name
         self.channels = {}
         self.num_channels = 0
 
-    def initialize_diag(
+    def load_diag_data(
         self,
         path_to_diag_data,
         path_to_diag_eigenvalues=None,
         path_to_diag_matrix_elements=None,
-        should_reinitialize=False,
+        should_reload=False,
     ):
         """
         Loads diagonal data: eigenvalues and matrix elements, and saves them
@@ -175,14 +169,14 @@ class OnePhoton:
         path_to_diag_data - path to diagonal data directory
         path_to_diag_eigenvalues - path to the file with diagonal eigenvalues
         path_to_diag_matrix_elements - path to the file with diagonal eigenvalues
-        should_reinitialize - tells whether we should reinitialize diagonal data if they
-        were previously initialized
+        should_reload - tells whether we should reload diagonal data if they
+        was previously loaded
         """
 
-        if not self.__diag_initialized or should_reinitialize:
-            if self.__diag_initialized and should_reinitialize:
+        if not self.__diag_loaded or should_reload:
+            if self.__diag_loaded and should_reload:
                 print(
-                    f"Reinitialize diagonal matrix elements and eigenvalues in {self.name}!"
+                    f"Reload diagonal matrix elements and eigenvalues in {self.name}!"
                 )
 
             if not path_to_diag_eigenvalues:
@@ -196,7 +190,7 @@ class OnePhoton:
 
             self._load_diag_eigenvalues(path_to_diag_eigenvalues)
             self._load_diag_matrix_elements(path_to_diag_matrix_elements)
-            self.__diag_initialized = True
+            self.__diag_loaded = True
 
     def _load_diag_eigenvalues(self, path_to_diag_eigenvalues):
         """
@@ -229,94 +223,111 @@ class OnePhoton:
 
         self.diag_matrix_elements = matrix_elements_re + 1j * matrix_elements_im
 
-    def assert_diag_initialization(self):
+    def assert_diag_data_load(self):
         """
-        Assertion of the diagonal data initialization.
+        Assertion that the diagonal data was loaded.
         """
         assert (
-            self.__diag_initialized
-        ), f"Diagonal matrix elements and eigenvalues are not initialized for {self.name}!"
+            self.__diag_loaded
+        ), f"Diagonal matrix elements and eigenvalues are not loaded for {self.name}!"
 
-    def initialize_hole(
+    def load_hole(
         self,
         path_to_pcur_all,
-        hole_kappa,
-        n_qn,
-        binding_energy,
+        hole: Hole,
         g_omega_IR,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
-        should_reinitialize=False,
+        should_reload=False,
     ):
         """
-        Initializes a hole and adds corresponding ionization channels.
+        Initializes corresponding ionization channels and loads data for them.
 
         Params:
         path_to_pcur_all - path to file with probabilty current for one photon
-        hole_kappa - kappa value of the hole
-        n_qn - principal quantum number of the hole
-        binding_energy - binding energy of the hole
+        hole - object of the Hole class containing hole's parameters
         g_omega_IR - energy of IR photon used in Fortaran simulations (in Hartree units)
         path_to_amp_all - path to file with amplitudes for one photon
         path_to_phaseF_all - path to file with the phase for larger relativistic component
         of the wave function
         path_to_phaseG_all - path to file with the phase for smaller relativistic component
         of the wave function
-        should_reinitialize - tells whether we should reinitialize if the hole was previously
-        initialized
+        should_reload - tells whether we should reload if the hole was previously
+        loaded
         """
-        is_initialized = self.is_initialized(n_qn, hole_kappa)
 
-        if not is_initialized or should_reinitialize:
-            if is_initialized and should_reinitialize:
-                print(
-                    f"Reinitialize {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}!"
-                )
+        is_loaded = self.is_loaded(hole)
+
+        if not is_loaded or should_reload:
+            if is_loaded and should_reload:
+                print(f"Reload {hole.name} hole in {self.name}!")
+
             self._add_hole_and_channels(
                 path_to_pcur_all,
-                hole_kappa,
-                n_qn,
-                binding_energy,
+                hole,
                 g_omega_IR,
                 path_to_amp_all=path_to_amp_all,
                 path_to_phaseF_all=path_to_phaseF_all,
                 path_to_phaseG_all=path_to_phaseG_all,
             )
 
-    def is_initialized(self, n_qn, hole_kappa):
+    def is_loaded(self, hole: Hole):
         """
-        Checks if the hole is initialized (contained in self.channels)
+        Checks if the hole is loaded (contained in self.channels)
 
         Params:
-        n_qn - principal quantum number of the hole
-        hole_kappa - kappa value of the hole
+        hole - object of the Hole class containing hole's parameters
 
         Returns:
-        True if initialized, False otherwise.
+        True if loaded, False otherwise.
         """
+
+        n_qn, hole_kappa = (
+            hole.n,
+            hole.kappa,
+        )  # principal quant. number and kappa of the hole
 
         return (n_qn, hole_kappa) in self.channels
 
-    def assert_hole_initialization(self, n_qn, hole_kappa):
+    def assert_hole_load(self, hole: Hole):
         """
-        Assertion of the hole initialization.
+        Assertion that the hole was loaded.
 
         Params:
-        n_qn - principal quantum number of the hole
-        hole_kappa - kappa value of the hole
+        hole - object of the Hole class containing hole's parameters
         """
 
-        assert self.is_initialized(
-            n_qn, hole_kappa
-        ), f"The hole {construct_hole_name(n_qn, hole_kappa)} in {self.name} is not initialized!"
+        assert self.is_loaded(
+            hole
+        ), f"The hole {hole.name} in {self.name} is not loaded!"
+
+    def get_channel_for_hole(self, hole: Hole):
+        """
+        Returns channel from self.channels for the given hole.
+
+        Params:
+        hole - object of the Hole class containing hole's parameters
+
+        Returns:
+        channel - channel for the given hole
+        """
+
+        self.assert_hole_load(hole)
+
+        n_qn, hole_kappa = (
+            hole.n,
+            hole.kappa,
+        )  # principal quantum number and kappa value of the hole
+
+        channel = self.channels[(n_qn, hole_kappa)]
+
+        return channel
 
     def _add_hole_and_channels(
         self,
         path_to_pcur_all,
-        hole_kappa,
-        n_qn,
-        binding_energy,
+        hole: Hole,
         g_omega_IR,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
@@ -327,9 +338,7 @@ class OnePhoton:
 
         Params:
         path_to_pcur_all - path to file with probabilty current for one photon
-        hole_kappa - kappa value of the hole
-        n_qn - principal quantum number of the hole
-        binding_energy - binding energy of the hole
+        hole - object of the Hole class containing hole's parameters
         g_omega_IR - energy of IR photon used in Fortaran simulations (in Hartree units)
         path_to_amp_all - path to file with amplitudes for one photon
         path_to_phaseF_all - path to file with the phase for larger relativistic component
@@ -350,69 +359,79 @@ class OnePhoton:
         if path_to_phaseG_all is None:
             path_to_phaseG_all = pert_path + "phaseG_all.dat"
 
+        n_qn, hole_kappa = (
+            hole.n,
+            hole.kappa,
+        )  # principal quant. number and kappa of the hole
+
         self.channels[(n_qn, hole_kappa)] = Channels(
             path_to_pcur_all,
             path_to_amp_all,
             path_to_phaseF_all,
             path_to_phaseG_all,
-            hole_kappa,
-            n_qn,
-            binding_energy,
+            hole,
             g_omega_IR,
         )
         self.num_channels += 1
 
-    def assert_final_kappa(self, n_qn, hole_kappa, final_kappa):
+    def assert_final_kappa(self, hole: Hole, final_kappa):
         """
         Assertion of the final state. Checks if the given final state
         is within possible ionization channels for the given hole.
 
         Params:
-        n_qn - principal quantum number of the initial hole
-        hole_kappa - kappa value of the hole
+        hole - object of the Hole class containing hole's parameters
         final_kappa - kappa value of the final state
         """
 
         assert self.check_final_kappa(
-            n_qn, hole_kappa, final_kappa
-        ), f"The final state with kappa {final_kappa} is not within channels for {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}!"
+            hole, final_kappa
+        ), f"The final state with kappa {final_kappa} is not within channels for {hole.name} hole in {self.name}!"
 
-    def check_final_kappa(self, n_qn, hole_kappa, final_kappa):
+    def check_final_kappa(self, hole: Hole, final_kappa):
         """
         Checks if the given final state is within ionization channels of the given initial hole.
 
         Params:
-        n_qn - principal quantum number of the initial hole
-        hole_kappa - kappa value of the initial hole
+        hole - object of the Hole class containing hole's parameters
         final_kappa - kappa value of the final state
 
         Returns:
         True if the final state is within ionization channels, False otherwise.
         """
 
-        self.assert_hole_initialization(n_qn, hole_kappa)
+        self.assert_hole_load(hole)
+
+        n_qn, hole_kappa = (
+            hole.n,
+            hole.kappa,
+        )  # principal quant. number and kappa of the hole
 
         channel = self.channels[(n_qn, hole_kappa)]
 
         return final_kappa in channel.final_states
 
-    def get_channel_labels_for_hole(self, n_qn, hole_kappa):
+    def get_channel_labels_for_hole(self, hole: Hole):
         """
         Constructs labels for all ionization channels of the given hole.
 
         Params:
-        n_qn - principal quantum number of the hole
-        hole_kappa - kappa value of the hole
+        hole - object of the Hole class containing hole's parameters
 
         Returns:
         channel_labels - list with labels of all ionization channels
         """
 
-        self.assert_hole_initialization(n_qn, hole_kappa)
+        self.assert_hole_load(hole)
+
+        n_qn, hole_kappa = (
+            hole.n,
+            hole.kappa,
+        )  # principal quant. number and kappa of the hole
 
         channel_labels = []
         channel = self.channels[(n_qn, hole_kappa)]
-        hole_name = channel.hole.name
+        hole_name = hole.name
         for final_state_key in channel.final_states.keys():
             final_state = channel.final_states[final_state_key]
             channel_labels.append(hole_name + " to " + final_state.name)

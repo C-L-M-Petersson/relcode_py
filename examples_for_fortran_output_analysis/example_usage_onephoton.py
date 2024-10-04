@@ -44,80 +44,74 @@ one_photon = OnePhoton("Radon")
 data_dir = "fortran_data\\2_-4_64_radon\\"
 
 """
-To initialize diagonal matrix elements and diagonal eigenvalues (required for e.g. photoabsorption 
-cross section) we use "initialize_diag" method inside the one_photon object. The method contains 
-"should_reinitialize" parameter that tells wheter we should reinitalize diagonal data if they were
-previously initialized (False by default).
+To load diagonal matrix elements and diagonal eigenvalues (required for e.g. photoabsorption 
+cross section) we use "load_diag_data" method inside the one_photon object. The method contains 
+"should_reload" parameter that tells wheter we should reinitalize diagonal data if they were
+previously loaded (False by default).
 
-To initialize a hole we call a method named "intialize_hole" inside the one_photon object. 
+Then we need to initialize some hole objects and load raw data for them. 
+To load a hole we call a method named "load_hole" inside the one_photon object. 
 The Fortran program outputs the probability current for ionisation from a hole to the set of 
-possible final states in the continuum (channels). So, when we initialize a hole we also add all these 
-"channels". In our example we look at ionisations from 6p_3/2 and 6p_1/2 Radon's holes 
-(kappa -2 and kappa 1 respectively).
+possible final states in the continuum (channels). So, when we load a hole we also add all these 
+"channels". "load_hole" method also contains "should_reload" parameter that tells wheter we 
+should reinitalize a hole if that hole was previously loaded (False by default).
 
-The intiailized holes are stored in the self.channels dictionary attribute of one_photon object 
-and can be accessed via the (n_qn, hole_kappa) key, where n_qn - principal quant. number of the
-hole and hole_kappa - kappa value of the hole.
-"intialize_hole" method also contains "should_reinitialize" parameter that tells wheter we 
-should reinitalize a hole if that hole was previously initialized (False by default).
+The data for loaded holes are stored in the self.channels dictionary attribute of one_photon object 
+and can be accessed via the "get_channel_for_hole" method.
 """
 
-# initialize diagonal data
-one_photon.initialize_diag(data_dir)
+# load diagonal data
+one_photon.load_diag_data(data_dir)
 
-# try to reinitialize diagonal data (outputs information message)
-one_photon.initialize_diag(data_dir, should_reinitialize=True)
+# try to reload diagonal data (outputs information message)
+one_photon.load_diag_data(data_dir, should_reload=True)
 
-# initialization of the 6p_3/2 hole
-path_to_pcur_6p3half = data_dir + "pert_-2_5\pcur_all.dat"
-path_to_omega_6p3half = data_dir + "pert_-2_5\omega.dat"
+# initialize 6p_3/2 hole
 hole_kappa_6p3half = -2
 hole_n_6p3half = 6
 binding_energy_6p3half = 0.395  # (in Hartree)
+hole_6p3half = Hole(hole_kappa_6p3half, hole_n_6p3half, binding_energy_6p3half)
+
+# load 6p_3/2
+path_to_pcur_6p3half = data_dir + "pert_-2_5\pcur_all.dat"
+path_to_omega_6p3half = data_dir + "pert_-2_5\omega.dat"
 g_omega_IR_6p3half = 1.55 / g_eV_per_Hartree  # (in Hartree)
-one_photon.initialize_hole(
+one_photon.load_hole(
     path_to_pcur_6p3half,
-    hole_kappa_6p3half,
-    hole_n_6p3half,
-    binding_energy_6p3half,
+    hole_6p3half,
     g_omega_IR_6p3half,
-)  # initialize hole's parameters and loads raw data for all possible ionization channels
+)  # initialize all possible ionization channels and loads raw data for them
 
 # We can get the labels for all possible inonization channels from 6p_3/2 hole:
-labels_from_6p3half = one_photon.get_channel_labels_for_hole(
-    hole_n_6p3half, hole_kappa_6p3half
-)
+labels_from_6p3half = one_photon.get_channel_labels_for_hole(hole_6p3half)
 print(f"Possible channels for 6p_3/2 hole: {labels_from_6p3half}")
 
-# initialization of the 6p_1/2 hole
-path_to_pcur_6p1half = data_dir + "pert_1_5\pcur_all.dat"
-path_to_omega_6p1half = data_dir + "pert_1_5\omega.dat"
+# initialize 6p_1/2 hole
 hole_kappa_6p1half = 1
 hole_n_6p1half = 6
 binding_energy_6p1half = 0.53578  # (in Hartree)
+hole_6p1half = Hole(hole_kappa_6p1half, hole_n_6p1half, binding_energy_6p1half)
+
+# load 6p_1/2 hole
+path_to_pcur_6p1half = data_dir + "pert_1_5\pcur_all.dat"
+path_to_omega_6p1half = data_dir + "pert_1_5\omega.dat"
 g_omega_IR_6p1half = 1.55 / g_eV_per_Hartree  # (in Hartree)
-one_photon.initialize_hole(
+one_photon.load_hole(
     path_to_pcur_6p1half,
-    hole_kappa_6p1half,
-    hole_n_6p1half,
-    binding_energy_6p1half,
+    hole_6p1half,
     g_omega_IR_6p1half,
-)  # initialize hole's parameters and loads raw data for all possible ionization channels
+)  # initialize all possible ionization channels and loads raw data for them
 
 # We can get the labels for all possible inonization channels from 6p_1/2 hole:
-labels_from_6p1half = one_photon.get_channel_labels_for_hole(
-    hole_n_6p1half, hole_kappa_6p1half
-)
+labels_from_6p1half = one_photon.get_channel_labels_for_hole(hole_6p1half)
 print(f"Possible channels for 6p_1/2 hole: {labels_from_6p1half}")
 
-# try to reinitialize 6p_1/2 hole with the same data (outputs information message)
-one_photon.initialize_hole(
+# try to reload 6p_1/2 hole with the same data (outputs information message)
+one_photon.load_hole(
     path_to_pcur_6p1half,
-    hole_kappa_6p1half,
-    hole_n_6p1half,
-    binding_energy_6p1half,
+    hole_6p1half,
     g_omega_IR_6p1half,
-    should_reinitialize=True,
+    should_reload=True,
 )
 
 # ============== Analysis with onephoton_analyzer ==============
@@ -126,7 +120,7 @@ onephoton_analyzer namespace contains functions to analyse raw output Fortran da
 meaningful physical properties (cross sections, asymmetry parameters, Wigner delay etc).
 
 Almost all functions in onephoton_analyzer require an object of OnePhoton class with some 
-initialized holes as input.
+loaded holes as input.
 """
 
 # 1. Photon and photoelctron kinetic energies
@@ -137,16 +131,16 @@ the Fortran simulations. We can easily do this by calling the methods shown belo
 # energies for 6p_3/2 (similarly for 6p_1/2)
 
 # XUV photon energies in eV
-en = get_omega_eV(one_photon, hole_n_6p3half, hole_kappa_6p3half)
+en = get_omega_eV(one_photon, hole_6p3half)
 
 # XUV photon energies in Hartree
-en = get_omega_Hartree(one_photon, hole_n_6p3half, hole_kappa_6p3half)
+en = get_omega_Hartree(one_photon, hole_6p3half)
 
 # photoelectron kinetic energies in eV
-en = get_electron_kinetic_energy_eV(one_photon, hole_n_6p3half, hole_kappa_6p3half)
+en = get_electron_kinetic_energy_eV(one_photon, hole_6p3half)
 
 # photoelectron kinetic energies in Hartree
-en = get_electron_kinetic_energy_Hartree(one_photon, hole_n_6p3half, hole_kappa_6p3half)
+en = get_electron_kinetic_energy_Hartree(one_photon, hole_6p3half)
 
 # 2. Integrated cross sections
 """
@@ -162,10 +156,10 @@ photoelectron kinetic energies in eV.
 # calculated in two ways: prob current and matrix amplitudes
 kappa_d3half = 2
 en, cs_pcur = get_partial_integrated_cross_section_1_channel(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, kappa_d3half, mode="pcur"
+    one_photon, hole_6p3half, kappa_d3half, mode="pcur"
 )
 en, cs_amp = get_partial_integrated_cross_section_1_channel(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, kappa_d3half, mode="amp"
+    one_photon, hole_6p3half, kappa_d3half, mode="amp"
 )
 
 plt.figure("Partial integrated crossection for 6p_3/2 -> d_3/2 ")
@@ -179,10 +173,10 @@ plt.title("Partial integrated crossection for 6p_3/2 -> d_3/2 ")
 kappa_d5half = -3
 final_kappas = [kappa_d3half, kappa_d5half]
 en, cs_pcur = get_partial_integrated_cross_section_multiple_channels(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, final_kappas, mode="pcur"
+    one_photon, hole_6p3half, final_kappas, mode="pcur"
 )
 en, cs_amp = get_partial_integrated_cross_section_multiple_channels(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, final_kappas, mode="amp"
+    one_photon, hole_6p3half, final_kappas, mode="amp"
 )
 plt.figure(
     "Partial integrated crossection for two channels: 6p_3/2 -> d_3/2 and 6p_3/2 -> d_5/2"
@@ -197,10 +191,10 @@ plt.title(
 # total integrated cross section for 6p_3/2
 # calculated in two ways: prob current and matrix amplitudes
 en, cs_pcur = get_total_integrated_cross_section_for_hole(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, mode="pcur"
+    one_photon, hole_6p3half, mode="pcur"
 )
 en, cs_amp = get_total_integrated_cross_section_for_hole(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, mode="amp"
+    one_photon, hole_6p3half, mode="amp"
 )
 plt.figure("Total integrated crossection for hole 6p_3/2")
 plt.plot(en, cs_pcur, label="pcur")
@@ -208,7 +202,7 @@ plt.plot(en, cs_amp, "--", label="amp")
 plt.title(f"Total integrated crossection for hole 6p_3/2")
 
 # Integrated photoelectron emission cross section. Can be computed in two energy modes:
-# 1. "omega" mode when we just compute the sum of cross sections for all initialized holes
+# 1. "omega" mode when we just compute the sum of cross sections for all loaded holes
 # and return the result for photon energies.
 # 2. "ekin" mode when we compute cross sections for electron kinetic energies (which are
 # different for different holes) and then interpolate them so that they match the same final
@@ -248,14 +242,14 @@ plt.title("Integrated photonelectron emission cross section for photoelectron en
 
 # 3. Photoabsorption cross section
 """
-Photoabsorption cross section is slightly different from the cross sections shown above. 
-We need diagonal data (eigenvalues and matrix elements) for computations, so be sure they 
-are initialized in advance (check the initialization section). We aslo must provide array 
+Photoabsorption cross section is slightly different from the cross sections shown above.
+We need diagonal data (eigenvalues and matrix elements) for computations, so be sure they
+are loaded in advance (check the initialization section). We aslo must provide array
 of photon energies (in eV) for which we want to compute the cross section.
 """
 
-# Photoabsorption cross section. Requires diagonal eigenvalues and matrix elements to be initialized.
-omega = get_omega_eV(one_photon, hole_n_6p3half, hole_kappa_6p3half)
+# Photoabsorption cross section. Requires diagonal eigenvalues and matrix elements to be loaded.
+omega = get_omega_eV(one_photon, hole_6p3half)
 cs = get_photoabsorption_cross_section(one_photon, omega)
 
 plt.figure("Photoabsorption cross section")
@@ -276,9 +270,7 @@ angles = np.array([0, 30, 45, 60])
 Z = 1
 
 # compute real asymmetry parameter
-en, b2_real = get_real_asymmetry_parameter(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, Z
-)
+en, b2_real = get_real_asymmetry_parameter(one_photon, hole_6p3half, Z)
 plt.figure("Real asymmetry parameter")
 plt.plot(en, b2_real)
 plt.title("Real asymmetry parameter")
@@ -286,9 +278,7 @@ plt.title("Real asymmetry parameter")
 # angular part of the cross section for 6p_3/2
 plt.figure("Angular part of cross section for 6p_3/2")
 for angle in angles:
-    ekin, ang_cs = get_angular_part_of_cross_section(
-        one_photon, hole_n_6p3half, hole_kappa_6p3half, Z, angle
-    )
+    ekin, ang_cs = get_angular_part_of_cross_section(one_photon, hole_6p3half, Z, angle)
     plt.plot(ekin, ang_cs, label=f"{angle}")
 plt.title("Angular part of cross section for 6p_3/2")
 plt.legend()
@@ -296,9 +286,7 @@ plt.legend()
 # total cross section for 6p_3/2 (angular + integrated parts)
 plt.figure("Total cross section for 6p_3/2")
 for angle in angles:
-    ekin, ang_cs = get_total_cross_section_for_hole(
-        one_photon, hole_n_6p3half, hole_kappa_6p3half, Z, angle
-    )
+    ekin, ang_cs = get_total_cross_section_for_hole(one_photon, hole_6p3half, Z, angle)
     plt.plot(ekin, ang_cs, label=f"{angle}")
 plt.title("Total cross section for 6p_3/2")
 plt.legend()
@@ -322,15 +310,13 @@ Z = 1
 # complex asymmetry parameter
 en, b2_complex = get_complex_asymmetry_parameter(
     one_photon,
-    hole_n_6p3half,
-    hole_kappa_6p3half,
+    hole_6p3half,
     Z,
 )
 # integrated Wigner delay for 6p_3/2
 en, delay = get_integrated_wigner_delay(
     one_photon,
-    hole_n_6p3half,
-    hole_kappa_6p3half,
+    hole_6p3half,
     Z,
 )
 plt.figure("Integrated Wigner delay for 6p_3/2")
@@ -340,8 +326,7 @@ plt.title("Integrated Wigner delay for 6p_3/2")
 # integrated Wigner phase for 6p_3/2
 en, phase = get_integrated_wigner_phase(
     one_photon,
-    hole_n_6p3half,
-    hole_kappa_6p3half,
+    hole_6p3half,
     Z,
 )
 plt.figure("Integrated Wigner phase for 6p_3/2")
@@ -353,8 +338,7 @@ plt.figure("Angular part of Wigner delay for 6p_3/2")
 for angle in angles:
     en, delay = get_angular_wigner_delay(
         one_photon,
-        hole_n_6p3half,
-        hole_kappa_6p3half,
+        hole_6p3half,
         Z,
         angle,
     )
@@ -367,8 +351,7 @@ plt.figure("Angular part of Wigner phase for 6p_3/2")
 for angle in angles:
     en, phase = get_angular_wigner_phase(
         one_photon,
-        hole_n_6p3half,
-        hole_kappa_6p3half,
+        hole_6p3half,
         Z,
         angle,
     )
@@ -381,8 +364,7 @@ plt.figure("Total wigner delay")
 for angle in angles:
     en, delay = get_wigner_delay(
         one_photon,
-        hole_n_6p3half,
-        hole_kappa_6p3half,
+        hole_6p3half,
         Z,
         angle,
     )
@@ -395,8 +377,7 @@ plt.figure("Total wigner phase")
 for angle in angles:
     en, phase = get_wigner_phase(
         one_photon,
-        hole_n_6p3half,
-        hole_kappa_6p3half,
+        hole_6p3half,
         Z,
         angle,
     )
