@@ -141,42 +141,63 @@ en = get_electron_kinetic_energy_Hartree(one_photon, hole_n_6p3half, hole_kappa_
 # 2. Integrated cross sections
 """
 Usually we want to look at the integrated (over all angles) photoionisation cross sections
-after absorption of the XUV photon. Currently, our code calculates them from the probability
-current ("ionisation rate"), but other options are also possbile and will be implemented soon.
+after absorption of the XUV photon. We can calculate cross sections from probability current
+using mode="pcur" parameter in the functions and from matrix amplitudes using mode="amp".
 
 NOTE: All these methods for cross section below also return the corresponding
 photoelectron kinetic energies in eV.
 """
 
 # partial integrated cross section for the ionziation 6p_3/2 -> d_3/2
+# calculated in two ways: prob current and matrix amplitudes
 kappa_d3half = 2
-en, cs = get_partial_integrated_cross_section_1_channel(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, kappa_d3half
+en, cs_pcur = get_partial_integrated_cross_section_1_channel(
+    one_photon, hole_n_6p3half, hole_kappa_6p3half, kappa_d3half, mode="pcur"
+)
+en, cs_amp = get_partial_integrated_cross_section_1_channel(
+    one_photon, hole_n_6p3half, hole_kappa_6p3half, kappa_d3half, mode="amp"
 )
 
+plt.figure("Partial integrated crossection for 6p_3/2 -> d_3/2 ")
+plt.plot(en, cs_pcur, label="pcur")
+plt.plot(en, cs_amp, "--", label="amp")
+plt.legend()
+plt.title("Partial integrated crossection for 6p_3/2 -> d_3/2 ")
+
 # partial integrated cross section for two channels: 6p_3/2 -> d_3/2 and 6p_3/2 -> d_5/2
+# calculated in two ways: prob current and matrix amplitudes
 kappa_d5half = -3
 final_kappas = [kappa_d3half, kappa_d5half]
-en, cs = get_partial_integrated_cross_section_multiple_channels(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half, final_kappas
+en, cs_pcur = get_partial_integrated_cross_section_multiple_channels(
+    one_photon, hole_n_6p3half, hole_kappa_6p3half, final_kappas, mode="pcur"
+)
+en, cs_amp = get_partial_integrated_cross_section_multiple_channels(
+    one_photon, hole_n_6p3half, hole_kappa_6p3half, final_kappas, mode="amp"
 )
 plt.figure(
     "Partial integrated crossection for two channels: 6p_3/2 -> d_3/2 and 6p_3/2 -> d_5/2"
 )
-plt.plot(en, cs)
+plt.plot(en, cs_pcur, label="pcur")
+plt.plot(en, cs_amp, "--", label="amp")
+plt.legend()
 plt.title(
     "Partial integrated crossection for two channels: 6p_3/2 -> d_3/2 and 6p_3/2 -> d_5/2"
 )
 
 # total integrated cross section for 6p_3/2
-en, cs = get_total_integrated_cross_section_for_hole(
-    one_photon, hole_n_6p3half, hole_kappa_6p3half
+# calculated in two ways: prob current and matrix amplitudes
+en, cs_pcur = get_total_integrated_cross_section_for_hole(
+    one_photon, hole_n_6p3half, hole_kappa_6p3half, mode="pcur"
+)
+en, cs_amp = get_total_integrated_cross_section_for_hole(
+    one_photon, hole_n_6p3half, hole_kappa_6p3half, mode="amp"
 )
 plt.figure("Total integrated crossection for hole 6p_3/2")
-plt.plot(en, cs)
+plt.plot(en, cs_pcur, label="pcur")
+plt.plot(en, cs_amp, "--", label="amp")
 plt.title(f"Total integrated crossection for hole 6p_3/2")
 
-# Integrated photoelectron emission cross section. Can be computed in two modes:
+# Integrated photoelectron emission cross section. Can be computed in two energy modes:
 # 1. "omega" mode when we just compute the sum of cross sections for all initialized holes
 # and return the result for photon energies.
 # 2. "ekin" mode when we compute cross sections for electron kinetic energies (which are
@@ -184,19 +205,35 @@ plt.title(f"Total integrated crossection for hole 6p_3/2")
 # kinetic energies.
 
 # "omega" mode
-omega, cs = get_integrated_photoelectron_emission_cross_section(
-    one_photon, mode="omega"
+# calculated in two ways: prob current and matrix amplitudes
+omega, cs_pcur = get_integrated_photoelectron_emission_cross_section(
+    one_photon, mode_energies="omega", mode_cs="pcur"
+)
+omega, cs_amp = get_integrated_photoelectron_emission_cross_section(
+    one_photon, mode_energies="omega", mode_cs="amp"
 )
 plt.figure("Integrated photonelectron emission cross section for photon energies")
-plt.plot(omega, cs)
+plt.plot(omega, cs_pcur, label="pcur")
+plt.plot(omega, cs_amp, "--", label="amp")
+plt.legend()
 plt.title(f"Integrated photonelectron emission cross section for photon energies")
 
 # "ekin" mode
-ekin, cs = get_integrated_photoelectron_emission_cross_section(one_photon, mode="ekin")
+# calculated in two ways: prob current and matrix amplitudes
+ekin, cs_pcur = get_integrated_photoelectron_emission_cross_section(
+    one_photon, mode_energies="ekin", mode_cs="pcur"
+)
+
+ekin, cs_amp = get_integrated_photoelectron_emission_cross_section(
+    one_photon, mode_energies="ekin", mode_cs="amp"
+)
+
 plt.figure(
     "Integrated photonelectron emission cross section for photoelectron energies"
 )
-plt.plot(ekin, cs)
+plt.plot(ekin, cs_pcur, label="pcur")
+plt.plot(ekin, cs_amp, "--", label="amp")
+plt.legend()
 plt.title("Integrated photonelectron emission cross section for photoelectron energies")
 
 # 3. Angular part of a hole's cross section
@@ -244,9 +281,9 @@ plt.legend()
 """
 The last but not least property we usually want to investigate in the one photon case is the
 Wigner delay (phase). And we actually want to consider both: integrated and angular part of the delay.
-The integrated part is computed from the so-called "Wigner intensity". The angular part is computed 
-through the complex asymmetry parameter. onephoton_analyzer namespace includes all the necessary 
-methods for such computations for both delay and phase. The usage examples are shown below. 
+The integrated part is computed from the so-called "Wigner intensity". The angular part is computed
+through the complex asymmetry parameter. onephoton_analyzer namespace includes all the necessary
+methods for such computations for both delay and phase. The usage examples are shown below.
 NOTE: all the method below also return corresponding photoelectron kinetic energies in eV.
 """
 

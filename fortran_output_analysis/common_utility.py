@@ -7,12 +7,12 @@ import numpy as np
 from sympy import N as sympy_to_num
 from sympy.physics.wigner import wigner_3j
 from scipy.special import gamma
-from scipy.constants import fine_structure
 import glob
 import json
 from scipy.interpolate import InterpolatedUnivariateSpline as interp
 from fortran_output_analysis.constants_and_parameters import (
     g_inverse_atomic_frequency_to_attoseconds,
+    fine_structure,
 )
 
 
@@ -240,10 +240,7 @@ def coulomb_phase(kappa, energy, Z, use_relativistic_wavenumber=True):
 
     l = l_from_kappa(kappa)
 
-    if use_relativistic_wavenumber:
-        k = wavenumber(energy)
-    else:
-        k = np.sqrt(2 * energy)
+    k = wavenumber(energy, relativistic=use_relativistic_wavenumber)
 
     x = Z / k
     b = np.angle(gamma(l + 1 - 1j * x))
@@ -251,10 +248,19 @@ def coulomb_phase(kappa, energy, Z, use_relativistic_wavenumber=True):
     return b - l * np.pi / 2
 
 
-def wavenumber(energy):
-    """Returns the relativistic wave number (k-value)."""
-    fsc_inv = 1.0 / fine_structure
-    return np.sqrt((energy + fsc_inv**2) ** 2 - fsc_inv**4) * fine_structure
+def wavenumber(ekin, relativistic=True):
+    """Returns the wave number (k-value)."""
+
+    ekin_copy = ekin.copy()
+    ekin_copy[ekin_copy < 0.0] = (
+        0.0  # change all negative elements to 0 to avoid warnings in np.sqrt
+    )
+    if relativistic:
+        fsc_inv = 1.0 / fine_structure
+        k = np.sqrt((ekin_copy + fsc_inv**2) ** 2 - fsc_inv**4) * fine_structure
+    else:
+        k = np.sqrt(2 * ekin_copy)
+    return k
 
 
 # ==================================================================================================
@@ -283,6 +289,31 @@ def convert_rate_to_cross_section(rates, omegas, divide=True):
 
         i += 1
     return cross_sections
+
+
+def convert_amplitude_to_cross_section(amplitudes, k, omega, divide_omega=True):
+    """
+    Computes cross section from the matrix amplitudes and wave numbers.
+
+    Params:
+    amplitudes - array with matrix amplitudes
+    k - array with wavenumber values
+    divide_omega - tells if we divide or multiply by the photon energy (omega) when
+    calculating the cross section
+
+    Returns:
+    cross_section - array with cross section values
+    """
+
+    convert_factor = 2 * np.pi / 3 * fine_structure * 0.52917721092**2 * 100.0
+    if divide_omega:
+        omega_factor = 1 / omega
+    else:
+        omega_factor = omega
+
+    cross_section = convert_factor * (amplitudes**2) * k * omega_factor
+
+    return cross_section
 
 
 def ground_state_energy(data_dir, kappa, n):
