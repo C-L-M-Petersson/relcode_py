@@ -32,7 +32,7 @@ from fortran_output_analysis.constants_and_parameters import g_eV_per_Hartree
 # ============== Initialization with OnePhoton ==============
 """
 The main purpose of the OnePhoton class is to initialize the atom, the holes we want to 
-consider ionization from and load the raw Fortran output data for these holes. 
+consider ionization from and load the raw Fortran output data. 
 
 In this guide we'll consider ionization from the Radon's 6p_3/2 and 6p_1/2 holes. 
 """
@@ -44,6 +44,11 @@ one_photon = OnePhoton("Radon")
 data_dir = "fortran_data\\2_-4_64_radon\\"
 
 """
+To initialize diagonal matrix elements and diagonal eigenvalues (required for e.g. photoabsorption 
+cross section) we use "initialize_diag" method inside the one_photon object. The method contains 
+"should_reinitialize" parameter that tells wheter we should reinitalize diagonal data if they were
+previously initialized (False by default).
+
 To initialize a hole we call a method named "intialize_hole" inside the one_photon object. 
 The Fortran program outputs the probability current for ionisation from a hole to the set of 
 possible final states in the continuum (channels). So, when we initialize a hole we also add all these 
@@ -53,10 +58,15 @@ possible final states in the continuum (channels). So, when we initialize a hole
 The intiailized holes are stored in the self.channels dictionary attribute of one_photon object 
 and can be accessed via the (n_qn, hole_kappa) key, where n_qn - principal quant. number of the
 hole and hole_kappa - kappa value of the hole.
-
-"intialize_hole" method also contains a parameter "should_reinitialize" that tells wheter we 
+"intialize_hole" method also contains "should_reinitialize" parameter that tells wheter we 
 should reinitalize a hole if that hole was previously initialized (False by default).
 """
+
+# initialize diagonal data
+one_photon.initialize_diag(data_dir)
+
+# try to reinitialize diagonal data (outputs information message)
+one_photon.initialize_diag(data_dir, should_reinitialize=True)
 
 # initialization of the 6p_3/2 hole
 path_to_pcur_6p3half = data_dir + "pert_-2_5\pcur_all.dat"
@@ -100,7 +110,7 @@ labels_from_6p1half = one_photon.get_channel_labels_for_hole(
 )
 print(f"Possible channels for 6p_1/2 hole: {labels_from_6p1half}")
 
-# try to reinitialize 6p_1/2 hole with the same data
+# try to reinitialize 6p_1/2 hole with the same data (outputs information message)
 one_photon.initialize_hole(
     path_to_pcur_6p1half,
     hole_kappa_6p1half,
@@ -113,7 +123,7 @@ one_photon.initialize_hole(
 # ============== Analysis with onephoton_analyzer ==============
 """
 onephoton_analyzer namespace contains functions to analyse raw output Fortran data and obtain
-meaningful physical properties (cross sectionas, asymmetry parameters, Wigner delay etc).
+meaningful physical properties (cross sections, asymmetry parameters, Wigner delay etc).
 
 Almost all functions in onephoton_analyzer require an object of OnePhoton class with some 
 initialized holes as input.
@@ -236,7 +246,23 @@ plt.plot(ekin, cs_amp, "--", label="amp")
 plt.legend()
 plt.title("Integrated photonelectron emission cross section for photoelectron energies")
 
-# 3. Angular part of a hole's cross section
+# 3. Photoabsorption cross section
+"""
+Photoabsorption cross section is slightly different from the cross sections shown above. 
+We need diagonal data (eigenvalues and matrix elements) for computations, so be sure they 
+are initialized in advance (check the initialization section). We aslo must provide array 
+of photon energies (in eV) for which we want to compute the cross section.
+"""
+
+# Photoabsorption cross section. Requires diagonal eigenvalues and matrix elements to be initialized.
+omega = get_omega_eV(one_photon, hole_n_6p3half, hole_kappa_6p3half)
+cs = get_photoabsorption_cross_section(one_photon, omega)
+
+plt.figure("Photoabsorption cross section")
+plt.plot(omega, cs)
+plt.title("Photoabsorption cross section")
+
+# 4. Angular part of a hole's cross section
 """
 For in depth analysis of ionization from a hole, we should also consider angular part of its total cross
 section. The angular part is computed thorugh the real asymmetry parameter. The corresponding methods
@@ -277,7 +303,7 @@ for angle in angles:
 plt.title("Total cross section for 6p_3/2")
 plt.legend()
 
-# 4. Wigner delay and phases
+# 5. Wigner delay and phases
 """
 The last but not least property we usually want to investigate in the one photon case is the
 Wigner delay (phase). And we actually want to consider both: integrated and angular part of the delay.

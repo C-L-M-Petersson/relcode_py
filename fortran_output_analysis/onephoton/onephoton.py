@@ -149,9 +149,93 @@ class OnePhoton:
     """
 
     def __init__(self, atom_name):
+        # attributes for diag data
+        self.diag_eigenvalues = np.array([])
+        self.diag_matrix_elements = np.array([])
+        self.__diag_initialized = False
+
+        # attributes for holes' data
         self.name = atom_name
         self.channels = {}
         self.num_channels = 0
+
+    def initialize_diag(
+        self,
+        path_to_diag_data,
+        path_to_diag_eigenvalues=None,
+        path_to_diag_matrix_elements=None,
+        should_reinitialize=False,
+    ):
+        """
+        Loads diagonal data: eigenvalues and matrix elements, and saves them
+        to the corresponding object attributes: self.diag_eigenvalues and
+        self.diag_matrix_elements.
+
+        Params:
+        path_to_diag_data - path to diagonal data directory
+        path_to_diag_eigenvalues - path to the file with diagonal eigenvalues
+        path_to_diag_matrix_elements - path to the file with diagonal eigenvalues
+        should_reinitialize - tells whether we should reinitialize diagonal data if they
+        were previously initialized
+        """
+
+        if not self.__diag_initialized or should_reinitialize:
+            if self.__diag_initialized and should_reinitialize:
+                print(
+                    f"Reinitialize diagonal matrix elements and eigenvalues in {self.name}!"
+                )
+
+            if not path_to_diag_eigenvalues:
+                path_to_diag_eigenvalues = (
+                    path_to_diag_data + "diag_eigenvalues_Jtot1.dat"
+                )
+            if not path_to_diag_matrix_elements:
+                path_to_diag_matrix_elements = (
+                    path_to_diag_data + "diag_matrix_elements_Jtot1.dat"
+                )
+
+            self._load_diag_eigenvalues(path_to_diag_eigenvalues)
+            self._load_diag_matrix_elements(path_to_diag_matrix_elements)
+            self.__diag_initialized = True
+
+    def _load_diag_eigenvalues(self, path_to_diag_eigenvalues):
+        """
+        Loads diagonal eigenvalues and saves them to self.diag_eigenvalues.
+
+        Params:
+        path_to_diag_eigenvalues - path to the file with diagonal eigenvalues
+        """
+
+        eigenvals_raw = np.loadtxt(path_to_diag_eigenvalues)
+        eigvals_re = eigenvals_raw[:, 0]  # real part
+        eigvals_im = eigenvals_raw[:, 1]  # imaginary part
+        self.diag_eigenvalues = eigvals_re + 1j * eigvals_im
+
+    def _load_diag_matrix_elements(self, path_to_diag_matrix_elements):
+        """
+        Loads diagonal matrix elements and saves them to self.diag_matrix_elements.
+
+        Params:
+        path_to_diag_matrix_elements - path to the file with diagonal eigenvalues
+        """
+
+        matrix_elements_raw = np.loadtxt(path_to_diag_matrix_elements)
+        matrix_elements_raw = matrix_elements_raw[
+            :, -2:
+        ]  # take only the right eigenvector
+
+        matrix_elements_re = matrix_elements_raw[:, 0]  # real part
+        matrix_elements_im = matrix_elements_raw[:, 1]  # imaginary part
+
+        self.diag_matrix_elements = matrix_elements_re + 1j * matrix_elements_im
+
+    def assert_diag_initialization(self):
+        """
+        Assertion of the diagonal data initialization.
+        """
+        assert (
+            self.__diag_initialized
+        ), f"Diagonal matrix elements and eigenvalues are not initialized for {self.name}!"
 
     def initialize_hole(
         self,
@@ -187,7 +271,7 @@ class OnePhoton:
         if not is_initialized or should_reinitialize:
             if is_initialized and should_reinitialize:
                 print(
-                    f"Reinitialize {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}."
+                    f"Reinitialize {self.channels[(n_qn, hole_kappa)].hole.name} hole in {self.name}!"
                 )
             self._add_hole_and_channels(
                 path_to_pcur_all,

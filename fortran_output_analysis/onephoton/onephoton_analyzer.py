@@ -5,6 +5,7 @@ from scipy.special import legendre
 from fortran_output_analysis.constants_and_parameters import (
     g_eV_per_Hartree,
     g_inverse_atomic_frequency_to_attoseconds,
+    fine_structure,
 )
 from fortran_output_analysis.common_utility import (
     convert_rate_to_cross_section,
@@ -270,6 +271,37 @@ def get_total_integrated_cross_section_for_hole(
     )
 
     return ekin_eV, total_cs
+
+
+def get_photoabsorption_cross_section(one_photon: OnePhoton, photon_energy_eV):
+    """
+    Computes integrated photoabsorption cross section using diagonal eigenvalues and matrix elements.
+
+    Params:
+    one_photon - object of the OnePhoton class with loaded diagonal data
+    photon_energy_eV - array of photon energies for which cross section is computed in eV
+
+    Returns:
+    cross_section - array with photoabsoprtion cross section values
+    """
+
+    one_photon.assert_diag_initialization()
+
+    M = one_photon.diag_matrix_elements
+    eigvals = one_photon.diag_eigenvalues
+
+    au_to_Mbarn = (0.529177210903) ** 2 * 100
+    convert_factor = 4.0 * np.pi / 3.0 * fine_structure * au_to_Mbarn
+
+    cross_section = np.zeros(len(photon_energy_eV))
+
+    for i in range(len(photon_energy_eV)):
+        omega_Hartree = photon_energy_eV[i] / g_eV_per_Hartree
+        omega_complex = omega_Hartree + 0 * 1j
+        imag_term = np.sum(M * M / (eigvals - omega_complex))
+        cross_section[i] = convert_factor * np.imag(imag_term) * np.real(omega_complex)
+
+    return cross_section
 
 
 def get_integrated_photoelectron_emission_cross_section(
