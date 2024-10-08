@@ -48,14 +48,13 @@ class Channels:
     ):
         """
         Params:
-        path_to_pcur_all - path to file with probabilty current for one photon
+        path_to_pcur - path to file with probabilty current for one photon
         path_to_amp_all - path to file with amplitudes for one photon
         path_to_phaseF_all - path to file with the phase for larger relativistic component
         of the wave function
         path_to_phaseG_all - path to file with the phase for smaller relativistic component
         of the wave function
         hole - object of the Hole class containing hole's parameters
-        binding_energy - binding energy of the hole
         """
 
         self.path_to_pcur = path_to_pcur
@@ -262,7 +261,7 @@ class OnePhoton:
 
         if not is_loaded or should_reload:
             if is_loaded and should_reload:
-                print(f"Reload {hole.name} hole in {self.name}!")
+                print(f"Reload {hole.name} hole!")
 
             self._add_hole_and_channels(
                 path_to_pcur_all,
@@ -298,9 +297,7 @@ class OnePhoton:
         hole - object of the Hole class containing hole's parameters
         """
 
-        assert self.is_hole_loaded(
-            hole
-        ), f"The hole {hole.name} in {self.name} is not loaded!"
+        assert self.is_hole_loaded(hole), f"The {hole.name} hole is not loaded!"
 
     def get_channel_for_hole(self, hole: Hole):
         """
@@ -350,6 +347,7 @@ class OnePhoton:
         pert_path = (
             os.path.sep.join(path_to_pcur_all.split(os.path.sep)[:-1]) + os.path.sep
         )
+
         if path_to_amp_all is None:
             path_to_amp_all = pert_path + "amp_all.dat"
         if path_to_phaseF_all is None:
@@ -383,7 +381,7 @@ class OnePhoton:
 
         assert self.check_final_kappa(
             hole, final_kappa
-        ), f"The final state with kappa {final_kappa} is not within channels for {hole.name} hole in {self.name}!"
+        ), f"The final state with kappa {final_kappa} is not within channels for {hole.name} hole!"
 
     def check_final_kappa(self, hole: Hole, final_kappa):
         """

@@ -4,6 +4,7 @@
 # Examples are kappa <-> l,j and wigner 3j-symbol functions
 # ==================================================================================================
 import numpy as np
+import os
 from sympy import N as sympy_to_num
 from sympy.physics.wigner import wigner_3j
 from scipy.special import gamma
@@ -60,20 +61,38 @@ def get_one_photon_directory_metadata(data_dir):
 #
 # ==================================================================================================
 class Hole:
-    def __init__(self, kappa, n_qn, binding_energy):
+    def __init__(self, atom_name, kappa, n_qn):
+        self.atom_name = atom_name
         self.kappa = kappa
         self.n = n_qn  # n quantum number (principal)
         self.l = l_from_kappa(kappa)
         self.j = j_from_kappa(kappa)
-        self.name = construct_hole_name(n_qn, kappa)
-        self.binding_energy = binding_energy  # in Hartree
+        self.name = construct_hole_name(atom_name, n_qn, kappa)
+        self.binding_energy = None  # binding energy in Hartree
+
+    def load_binding_energy(self, path_to_hf_data):
+        """
+        Loads binding energy for the hole (in Hartee) from the file
+        with Hartree Fock energies.
+
+        Params:
+        path_to_hf_data - path to the file with Hartree Fock data
+        """
+
+        path_to_hf_energies = (
+            path_to_hf_data + "hf_energies_kappa_" + str(self.kappa) + ".dat"
+        )
+        hf_energies = np.loadtxt(path_to_hf_energies)
+        hf_energies_real = hf_energies[:, 0]  # take the real part of HF energies
+        self.binding_energy = -hf_energies_real[self.n - self.l - 1]
 
 
-def construct_hole_name(n_qn, hole_kappa):
+def construct_hole_name(atom_name, n_qn, hole_kappa):
     """
     Constructs a readable name for the hole with given parameters.
 
     Params:
+    atom_name - name of the parent atom
     n_qn - principal quantum number of the hole
     hole_kappa - kappa value of the hole
 
@@ -82,7 +101,7 @@ def construct_hole_name(n_qn, hole_kappa):
     """
     l = l_from_kappa(hole_kappa)
     j_int = j_from_kappa_int(hole_kappa)
-    name = str(n_qn) + l_to_str(l) + ("_{%i/2}" % (j_int))
+    name = atom_name + " " + str(n_qn) + l_to_str(l) + ("_{%i/2}" % (j_int))
 
     return name
 

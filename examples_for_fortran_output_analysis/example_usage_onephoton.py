@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -69,13 +70,17 @@ one_photon.load_diag_data(data_dir)
 # try to reload diagonal data (outputs information message)
 one_photon.load_diag_data(data_dir, should_reload=True)
 
-# initialize 6p_3/2 hole
+# path to Hartree Fock data folder for holes' binding energy load
+path_to_hf_data = data_dir + "hf_wavefunctions" + os.path.sep
+
+# initialize 6p_3/2 hole and load its binding energy
 hole_kappa_6p3half = -2
 hole_n_6p3half = 6
 binding_energy_6p3half = 0.395  # (in Hartree)
-hole_6p3half = Hole(hole_kappa_6p3half, hole_n_6p3half, binding_energy_6p3half)
+hole_6p3half = Hole("Radon", hole_kappa_6p3half, hole_n_6p3half)
+hole_6p3half.load_binding_energy(path_to_hf_data)
 
-# load 6p_3/2
+# load 6p_3/2 to one_photon object
 path_to_pcur_6p3half = data_dir + "pert_-2_5\pcur_all.dat"
 path_to_omega_6p3half = data_dir + "pert_-2_5\omega.dat"
 one_photon.load_hole(
@@ -85,15 +90,15 @@ one_photon.load_hole(
 
 # We can get the labels for all possible inonization channels from 6p_3/2 hole:
 labels_from_6p3half = one_photon.get_channel_labels_for_hole(hole_6p3half)
-print(f"Possible channels for 6p_3/2 hole: {labels_from_6p3half}")
+print(f"Possible channels for {hole_6p3half.name}: {labels_from_6p3half}")
 
-# initialize 6p_1/2 hole
+# initialize 6p_1/2 hole and load its binding energy
 hole_kappa_6p1half = 1
 hole_n_6p1half = 6
-binding_energy_6p1half = 0.53578  # (in Hartree)
-hole_6p1half = Hole(hole_kappa_6p1half, hole_n_6p1half, binding_energy_6p1half)
+hole_6p1half = Hole("Radon", hole_kappa_6p1half, hole_n_6p1half)
+hole_6p1half.load_binding_energy(path_to_hf_data)
 
-# load 6p_1/2 hole
+# load 6p_1/2 hole to one_photon object
 path_to_pcur_6p1half = data_dir + "pert_1_5\pcur_all.dat"
 path_to_omega_6p1half = data_dir + "pert_1_5\omega.dat"
 one_photon.load_hole(
@@ -103,7 +108,7 @@ one_photon.load_hole(
 
 # We can get the labels for all possible inonization channels from 6p_1/2 hole:
 labels_from_6p1half = one_photon.get_channel_labels_for_hole(hole_6p1half)
-print(f"Possible channels for 6p_1/2 hole: {labels_from_6p1half}")
+print(f"Possible channels for {hole_6p1half.name}: {labels_from_6p1half}")
 
 # try to reload 6p_1/2 hole with the same data (outputs information message)
 one_photon.load_hole(
@@ -114,18 +119,18 @@ one_photon.load_hole(
 
 # ============== Analysis with onephoton_... namespaces ==============
 """
-onephoton folder contains different namespaces with functions that analyse raw output Fortran 
-data and obtain meaningful physical properties. There is a namespace for cross sections, 
+onephoton folder contains different namespaces with functions that analyse raw output Fortran
+data and obtain meaningful physical properties. There is a namespace for cross sections,
 a namespace for asymmetry parameters, etc.
 
-Almost all functions in these namespaces require an object of OnePhoton class with some 
+Almost all functions in these namespaces require an object of OnePhoton class with some
 loaded holes as input.
 """
 
 # 1. Photon and photoelctron kinetic energies with onephoton_utilities.
 """
-It's usually important to check for which XUV photon/photoelectron energies our data were computed 
-in the Fortran simulations. We can easily do this by calling the methods from 
+It's usually important to check for which XUV photon/photoelectron energies our data were computed
+in the Fortran simulations. We can easily do this by calling the methods from
 onephoton_utilities namespace shown below:
 """
 import fortran_output_analysis.onephoton.onephoton_utilities as util
@@ -147,9 +152,9 @@ en = util.get_electron_kinetic_energy_Hartree(one_photon, hole_6p3half)
 # 2. Integrated cross sections with onephoton_cross_sections
 """
 Usually we want to look at the integrated (over all angles) photoionisation cross sections
-after absorption of the XUV photon. All the required methods are contained in 
+after absorption of the XUV photon. All the required methods are contained in
 onephoton_cross_sections namespace.
-We can calculate cross sections from probability current using mode="pcur" parameter in the 
+We can calculate cross sections from probability current using mode="pcur" parameter in the
 functions and from matrix amplitudes using mode="amp".
 
 NOTE: All these methods for cross sections below also return the corresponding
@@ -263,8 +268,8 @@ plt.title("Photoabsorption cross section")
 
 # 4. Angular part of a hole's cross section
 """
-For in depth analysis of ionization from a hole, we should also consider angular part of its 
-total cross section. The angular part is computed thorugh the real asymmetry parameter. 
+For in depth analysis of ionization from a hole, we should also consider angular part of its
+total cross section. The angular part is computed thorugh the real asymmetry parameter.
 The methods for asymmetry parameters are contained in onephoton_asymmetry_parameter namespace.
 
 NOTE: All methods also return corresponding photoelectron energy in eV.
@@ -308,8 +313,8 @@ plt.legend()
 The last but not least property we usually want to investigate in the one photon case is the
 Wigner delay (phase). And we actually want to consider both: integrated and angular parts.
 The integrated part is computed from the so-called "Wigner intensity". The angular part is computed
-through the complex asymmetry parameter. onephoton_delays_and_phases namespace includes all 
-the necessary methods for such computations for both delay and phase. 
+through the complex asymmetry parameter. onephoton_delays_and_phases namespace includes all
+the necessary methods for such computations for both delay and phase.
 The usage examples are shown below.
 
 NOTE: all the method below also return corresponding photoelectron kinetic energies in eV.
@@ -411,11 +416,11 @@ input()
 
 # 6. Wigner delay and phases for two simulations
 """
-Sometimes we may want to compute Wigner delay and phase based on the data from two different 
+Sometimes we may want to compute Wigner delay and phase based on the data from two different
 simultations: one for absorption path and one for emission path. In this scenario, we have to
-properly match matrices from both simulations and compute the phase/delay on the interpolated 
-values (matrix elements). The logic for handling this is included in all the functions shown 
-under section "5. Wigner delay and phases". You just need to provide the second OnePhoton object 
+properly match matrices from both simulations and compute the phase/delay on the interpolated
+values (matrix elements). The logic for handling this is included in all the functions shown
+under section "5. Wigner delay and phases". You just need to provide the second OnePhoton object
 (corresponding to the second simulation) and a couple of additional parameters which are described
 below.
 """

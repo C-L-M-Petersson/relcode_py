@@ -8,7 +8,6 @@ from fortran_output_analysis.constants_and_parameters import (
 )
 from fortran_output_analysis.common_utility import (
     convert_rate_to_cross_section,
-    exported_mathematica_tensor_to_python_list,
     wavenumber,
     convert_amplitude_to_cross_section,
     Hole,
@@ -18,6 +17,7 @@ from fortran_output_analysis.onephoton.onephoton_utilities import (
     get_omega_Hartree,
     get_electron_kinetic_energy_eV,
     get_omega_eV,
+    get_electron_kinetic_energy_Hartree,
 )
 from fortran_output_analysis.onephoton.onephoton_asymmetry_parameters import (
     get_real_asymmetry_parameter,
@@ -74,7 +74,7 @@ def get_partial_integrated_cross_section_1_channel(
         rate = channel.get_rate_for_channel(final_kappa)
         cross_section = convert_rate_to_cross_section(rate, omega, divide_omega)
     else:
-        ekin = omega - hole.binding_energy
+        ekin = get_electron_kinetic_energy_Hartree(one_photon, hole)
         k = wavenumber(ekin, relativistic=relativistic)  # wavenumber vector
         final_state = channel.final_states[final_kappa]
         column_index = final_state.pcur_column_index
