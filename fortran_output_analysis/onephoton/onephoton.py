@@ -30,6 +30,9 @@ class FinalState:
         self.pcur_column_index = pcur_col_idx
 
 
+# TODO: remove binding energy parameter as input, get it from the output files instead
+
+
 class Channels:
     """
     Stores inforation about ionization channels for the given hole.
@@ -42,7 +45,6 @@ class Channels:
         path_to_phaseF_all,
         path_to_phaseG_all,
         hole: Hole,
-        g_omega_IR,
     ):
         """
         Params:
@@ -54,7 +56,6 @@ class Channels:
         of the wave function
         hole - object of the Hole class containing hole's parameters
         binding_energy - binding energy of the hole
-        g_omega_IR - energy of IR photon used in Fortaran simulations (in Hartree units)
         """
 
         self.path_to_pcur = path_to_pcur
@@ -65,7 +66,6 @@ class Channels:
         self.raw_phaseF_data = load_raw_data(path_to_phaseF_all)
         self.raw_phaseG_data = load_raw_data(path_to_phaseG_all)
         self.add_final_states()
-        self.g_omega_IR = g_omega_IR  # energy of the IR photon (in Hartree)
 
     def add_final_states(self):
         """
@@ -142,7 +142,7 @@ class OnePhoton:
     if the data was loaded.
     """
 
-    def __init__(self, atom_name):
+    def __init__(self, atom_name, g_omega_IR):
         # attributes for diag data
         self.diag_eigenvalues = np.array([])
         self.diag_matrix_elements = np.array([])
@@ -152,6 +152,9 @@ class OnePhoton:
         self.name = atom_name
         self.channels = {}
         self.num_channels = 0
+
+        # energy of the IR photon used in Fortran simulations (in Hartree)
+        self.g_omega_IR = g_omega_IR
 
     def load_diag_data(
         self,
@@ -235,7 +238,6 @@ class OnePhoton:
         self,
         path_to_pcur_all,
         hole: Hole,
-        g_omega_IR,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
@@ -247,7 +249,6 @@ class OnePhoton:
         Params:
         path_to_pcur_all - path to file with probabilty current for one photon
         hole - object of the Hole class containing hole's parameters
-        g_omega_IR - energy of IR photon used in Fortaran simulations (in Hartree units)
         path_to_amp_all - path to file with amplitudes for one photon
         path_to_phaseF_all - path to file with the phase for larger relativistic component
         of the wave function
@@ -257,7 +258,7 @@ class OnePhoton:
         loaded
         """
 
-        is_loaded = self.is_loaded(hole)
+        is_loaded = self.is_hole_loaded(hole)
 
         if not is_loaded or should_reload:
             if is_loaded and should_reload:
@@ -266,13 +267,12 @@ class OnePhoton:
             self._add_hole_and_channels(
                 path_to_pcur_all,
                 hole,
-                g_omega_IR,
                 path_to_amp_all=path_to_amp_all,
                 path_to_phaseF_all=path_to_phaseF_all,
                 path_to_phaseG_all=path_to_phaseG_all,
             )
 
-    def is_loaded(self, hole: Hole):
+    def is_hole_loaded(self, hole: Hole):
         """
         Checks if the hole is loaded (contained in self.channels)
 
@@ -298,7 +298,7 @@ class OnePhoton:
         hole - object of the Hole class containing hole's parameters
         """
 
-        assert self.is_loaded(
+        assert self.is_hole_loaded(
             hole
         ), f"The hole {hole.name} in {self.name} is not loaded!"
 
@@ -328,7 +328,6 @@ class OnePhoton:
         self,
         path_to_pcur_all,
         hole: Hole,
-        g_omega_IR,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
@@ -339,7 +338,6 @@ class OnePhoton:
         Params:
         path_to_pcur_all - path to file with probabilty current for one photon
         hole - object of the Hole class containing hole's parameters
-        g_omega_IR - energy of IR photon used in Fortaran simulations (in Hartree units)
         path_to_amp_all - path to file with amplitudes for one photon
         path_to_phaseF_all - path to file with the phase for larger relativistic component
         of the wave function
@@ -370,7 +368,6 @@ class OnePhoton:
             path_to_phaseF_all,
             path_to_phaseG_all,
             hole,
-            g_omega_IR,
         )
         self.num_channels += 1
 
