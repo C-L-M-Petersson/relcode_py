@@ -333,8 +333,31 @@ def ground_state_energy(data_dir, kappa, n):
     return [float(l.split()[0]) for l in open(hf_file, "r").readlines()][n - 1]
 
 
-def delay_to_phase(delay, g_omega_IR):
-    return delay * 2.0 * g_omega_IR / g_inverse_atomic_frequency_to_attoseconds
+def delay_to_phase(delay, omega_diff):
+    return delay * omega_diff / g_inverse_atomic_frequency_to_attoseconds
+
+
+def compute_omega_diff(
+    photon_object_1,
+    photon_object_2=None,
+):
+    """
+    Computes energy difference between absorption and emission paths.
+    Can compute for 1 or 2 simulations.
+
+    Params:
+    photon_object_1 - OnePhoton or TwoPhoton object corresponding to the first simulation
+    photon_object_2 - OnePhoton or TwoPhoton object corresponding to the second simulation
+
+    Returns:
+    omega_diff - energy difference between absorption and emission paths
+    """
+    if photon_object_2:  # if two simulations are provided
+        omega_diff = photon_object_1.g_omega_IR + photon_object_2.g_omega_IR
+    else:  # if only one simulation is provided
+        omega_diff = 2.0 * photon_object_1.g_omega_IR
+
+    return omega_diff
 
 
 def unwrap_phase_with_nans(phase):
@@ -345,3 +368,94 @@ def unwrap_phase_with_nans(phase):
     phase[nanmask] = np.unwrap(phase[nanmask])
 
     return phase
+
+
+def final_energies_for_matching_1sim(energies, steps_per_IR_photon):
+    """
+    Prepares an array of final energies to match absorption and emission matrices
+    in the case of 1 simulation. Simply shifts the energy array by steps_per_IR_photon.
+
+    Params:
+    energies - given array of energies
+    steps_per_IR_photon - the number of XUV energy steps fitted in the IR photon energy
+
+    Returns:
+    array of final energies for matching
+    """
+
+    return energies[steps_per_IR_photon : (len(energies) - steps_per_IR_photon)]
+
+
+def match_matrix_elements_1sim(emi_elements, abs_elements, steps_per_IR_photon):
+    """
+    Matches absoprtion and emission matrix elements in the case of 1 simulation. Simply shifts
+    them by steps_per_IR_photon.
+
+    Params:
+    emi_elements - unmatched elements for emission path
+    abs_elements - unmatched elements for absorption path
+    steps_per_IR_photon - the number of XUV energy steps fitted in the IR photon energy
+
+    Returns:
+    matched absorotion and emission matrix elements
+    """
+
+    return (
+        emi_elements[2 * steps_per_IR_photon :],
+        abs_elements[: len(abs_elements) - 2 * steps_per_IR_photon],
+    )
+
+
+def final_energies_for_matching_2sim(energies_emi, energies_abs, energies_mode):
+    """
+    Prepares an array of final energies to match absorption and emission matrices
+    in the case of 2 simulations.
+
+    Params:
+    energies_emi - array of energies for emission path
+    energies_abs - array of energies for absorption path
+    energies_mode - tells which energies we take for matrices interpolation. Possible options:
+    "emi" - energies from emission object, "abs" - energies from absorption object, "both" -
+    combined array from both emission and absorption objects.
+
+    Returns:
+    array of final energies for matching
+    """
+
+    assert energies_mode in (
+        "emi",
+        "abs",
+        "both",
+    ), "energies_mode for matrix interpolation must be 'emi', 'abs' or 'both'!"
+
+    if energies_mode == "emi":
+        return energies_emi
+    elif energies_mode == "abs":
+        return energies_abs
+    else:
+        energies_concat = np.concatenate((energies_abs, energies_emi))
+        energies_final = np.sort(np.unique(energies_concat))
+        return energies_final
+
+
+def match_matrix_elements_2sim(
+    energies_final, energies_emi, energies_abs, emi_elements, abs_elements
+):
+    """
+    Matches absoprtion and emission matrix elements in the case of 2 simulations.
+
+    Params:
+    energies_final - array of final photoelectron energies
+    energies_emi - array of energies for emission path
+    energies_abs - array of energies for absorption path
+    emi_elements - unmatched elements for emission path
+    abs_elements - unmatched elements for absorption path
+
+    Returns:
+    emi_elements_matched - matched emission matrix elements
+    abs_elements_matched - matched absorption matrix elements
+    """
+    emi_elements_matched = np.interp(energies_final, energies_emi, emi_elements)
+    abs_elements_matched = np.interp(energies_final, energies_abs, abs_elements)
+
+    return emi_elements_matched, abs_elements_matched
