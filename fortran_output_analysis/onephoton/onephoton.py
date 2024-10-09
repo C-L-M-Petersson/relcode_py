@@ -30,7 +30,7 @@ class FinalState:
         self.pcur_column_index = pcur_col_idx
 
 
-# TODO: remove binding energy parameter as input, get it from the output files instead
+# TODO: return to the passing hole arguments as n_qn and kappa instead of the hole object
 
 
 class Channels:
@@ -143,8 +143,8 @@ class OnePhoton:
 
     def __init__(self, atom_name, g_omega_IR):
         # attributes for diag data
-        self.diag_eigenvalues = np.array([])
-        self.diag_matrix_elements = np.array([])
+        self.diag_eigenvalues = None
+        self.diag_matrix_elements = None
         self.__diag_loaded = False  # tells whether diagonal data was loaded
 
         # attributes for holes' data
@@ -157,7 +157,7 @@ class OnePhoton:
 
     def load_diag_data(
         self,
-        path_to_diag_data,
+        path_to_data,
         path_to_diag_eigenvalues=None,
         path_to_diag_matrix_elements=None,
         should_reload=False,
@@ -168,11 +168,11 @@ class OnePhoton:
         self.diag_matrix_elements.
 
         Params:
-        path_to_diag_data - path to diagonal data directory
+        path_to_data - path to the output folder with Fortran simulation results
         path_to_diag_eigenvalues - path to the file with diagonal eigenvalues
-        path_to_diag_matrix_elements - path to the file with diagonal eigenvalues
+        path_to_diag_matrix_elements - path to the file with diagonal matrix elements
         should_reload - tells whether we should reload diagonal data if they
-        was previously loaded
+        were previously loaded
         """
 
         if not self.__diag_loaded or should_reload:
@@ -181,13 +181,14 @@ class OnePhoton:
                     f"Reload diagonal matrix elements and eigenvalues in {self.name}!"
                 )
 
+            # if the paths to diag data are not specified, we assume that they are
+            # in the output data folder
             if not path_to_diag_eigenvalues:
-                path_to_diag_eigenvalues = (
-                    path_to_diag_data + "diag_eigenvalues_Jtot1.dat"
-                )
+                path_to_diag_eigenvalues = path_to_data + "diag_eigenvalues_Jtot1.dat"
+
             if not path_to_diag_matrix_elements:
                 path_to_diag_matrix_elements = (
-                    path_to_diag_data + "diag_matrix_elements_Jtot1.dat"
+                    path_to_data + "diag_matrix_elements_Jtot1.dat"
                 )
 
             self._load_diag_eigenvalues(path_to_diag_eigenvalues)
@@ -235,17 +236,23 @@ class OnePhoton:
 
     def load_hole(
         self,
-        path_to_pcur_all,
         hole: Hole,
+        path_to_data,
+        path_to_pcur_all=None,
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
+        path_to_hf_energies=None,
+        path_to_omega=None,
+        path_to_sp_ekin=None,
         should_reload=False,
     ):
         """
-        Initializes corresponding ionization channels and loads data for them.
+        Initializes hole, corresponding ionization channels and loads data for them.
 
         Params:
+        hole - object of the Hole class containing hole's parameters
+        path_to_data - path to the output folder with Fortran simulation results
         path_to_pcur_all - path to file with probabilty current for one photon
         hole - object of the Hole class containing hole's parameters
         path_to_amp_all - path to file with amplitudes for one photon
@@ -253,6 +260,11 @@ class OnePhoton:
         of the wave function
         path_to_phaseG_all - path to file with the phase for smaller relativistic component
         of the wave function
+        path_to_hf_energies - path to the file with Hartree Fock energies for the given hole
+        path_to_omega - path to the omega.dat file for the given hole (usually in
+        pert folders)
+        path_to_sp_ekin - path to the file with kinetic energies for the given hole from
+        secondphoton folder
         should_reload - tells whether we should reload if the hole was previously
         loaded
         """
@@ -263,13 +275,67 @@ class OnePhoton:
             if is_loaded and should_reload:
                 print(f"Reload {hole.name} hole!")
 
-            self._add_hole_and_channels(
-                path_to_pcur_all,
-                hole,
-                path_to_amp_all=path_to_amp_all,
-                path_to_phaseF_all=path_to_phaseF_all,
-                path_to_phaseG_all=path_to_phaseG_all,
+            # TODO: When returning to the passing hole arguments as n_qn and kappa instead
+            # of the hole object, the hole should be initialized here!
+
+            # specify paths for loading hole's binding energy
+            if path_to_hf_energies is None:
+                path_to_hf_energies = (
+                    path_to_data
+                    + "hf_wavefunctions"
+                    + os.path.sep
+                    + f"hf_energies_kappa_{hole.kappa}.dat"
+                )
+            if path_to_omega is None:
+                path_to_omega = (
+                    path_to_data
+                    + f"pert_{hole.kappa}_{hole.n - hole.l}"
+                    + os.path.sep
+                    + "omega.dat"
+                )
+            if path_to_sp_ekin is None:
+                path_to_sp_ekin = (
+                    path_to_data
+                    + "second_photon"
+                    + os.path.sep
+                    + f"energy_rpa_{hole.kappa}_{hole.n - hole.l}.dat"
+                )
+
+            # load binding energy for the hole
+            hole._load_binding_energy(
+                path_to_hf_energies,
+                path_to_omega=path_to_omega,
+                path_to_sp_ekin=path_to_sp_ekin,
             )
+
+            # If the paths to the pcur, amplitude and phase files were not specified we assume
+            # that they are in the pert folder.
+            pert_path = (
+                path_to_data + f"pert_{hole.kappa}_{hole.n - hole.l}" + os.path.sep
+            )
+
+            if path_to_pcur_all is None:
+                path_to_pcur_all = pert_path + "pcur_all.dat"
+            if path_to_amp_all is None:
+                path_to_amp_all = pert_path + "amp_all.dat"
+            if path_to_phaseF_all is None:
+                path_to_phaseF_all = pert_path + "phaseF_all.dat"
+            if path_to_phaseG_all is None:
+                path_to_phaseG_all = pert_path + "phaseG_all.dat"
+
+            n_qn, hole_kappa = (
+                hole.n,
+                hole.kappa,
+            )  # principal quant. number and kappa of the hole
+
+            self.channels[(n_qn, hole_kappa)] = Channels(
+                path_to_pcur_all,
+                path_to_amp_all,
+                path_to_phaseF_all,
+                path_to_phaseG_all,
+                hole,
+            )
+            self.num_channels += 1
 
     def is_hole_loaded(self, hole: Hole):
         """
@@ -281,6 +347,10 @@ class OnePhoton:
         Returns:
         True if loaded, False otherwise.
         """
+
+        assert (
+            hole.atom_name == self.name
+        ), f"The hole {hole.name} is not for {self.name} atom!"
 
         n_qn, hole_kappa = (
             hole.n,
@@ -320,54 +390,6 @@ class OnePhoton:
         channel = self.channels[(n_qn, hole_kappa)]
 
         return channel
-
-    def _add_hole_and_channels(
-        self,
-        path_to_pcur_all,
-        hole: Hole,
-        path_to_amp_all=None,
-        path_to_phaseF_all=None,
-        path_to_phaseG_all=None,
-    ):
-        """
-        Adds ionization channels for the given hole.
-
-        Params:
-        path_to_pcur_all - path to file with probabilty current for one photon
-        hole - object of the Hole class containing hole's parameters
-        path_to_amp_all - path to file with amplitudes for one photon
-        path_to_phaseF_all - path to file with the phase for larger relativistic component
-        of the wave function
-        path_to_phaseG_all - path to file with the phase for smaller relativistic component
-        of the wave function
-        """
-
-        # If the paths to the amplitude and phase files were not specified we assume
-        # that they are in the same directory as the pcur file.
-        pert_path = (
-            os.path.sep.join(path_to_pcur_all.split(os.path.sep)[:-1]) + os.path.sep
-        )
-
-        if path_to_amp_all is None:
-            path_to_amp_all = pert_path + "amp_all.dat"
-        if path_to_phaseF_all is None:
-            path_to_phaseF_all = pert_path + "phaseF_all.dat"
-        if path_to_phaseG_all is None:
-            path_to_phaseG_all = pert_path + "phaseG_all.dat"
-
-        n_qn, hole_kappa = (
-            hole.n,
-            hole.kappa,
-        )  # principal quant. number and kappa of the hole
-
-        self.channels[(n_qn, hole_kappa)] = Channels(
-            path_to_pcur_all,
-            path_to_amp_all,
-            path_to_phaseF_all,
-            path_to_phaseG_all,
-            hole,
-        )
-        self.num_channels += 1
 
     def assert_final_kappa(self, hole: Hole, final_kappa):
         """

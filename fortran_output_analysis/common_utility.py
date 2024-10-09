@@ -62,6 +62,12 @@ def get_one_photon_directory_metadata(data_dir):
 # ==================================================================================================
 class Hole:
     def __init__(self, atom_name, kappa, n_qn):
+        """
+        Params:
+        atom_name - name of the parent atom
+        kappa - kappa value of the hole
+        n_qn - pricnipal quantum number of the hole
+        """
         self.atom_name = atom_name
         self.kappa = kappa
         self.n = n_qn  # n quantum number (principal)
@@ -70,21 +76,83 @@ class Hole:
         self.name = construct_hole_name(atom_name, n_qn, kappa)
         self.binding_energy = None  # binding energy in Hartree
 
-    def load_binding_energy(self, path_to_hf_data):
+    def _load_binding_energy(
+        self, path_to_hf_energies, path_to_omega=None, path_to_sp_ekin=None
+    ):
+        """
+        Loads binding energy for the give hole. At first, attempts to load binding energy from
+        the Hartree Fock energies. If not succeeded, attempts to load from kinetic energies from
+        the secondphoton folder. If both options are failed, prints a warning message.
+
+        Params:
+        path_to_hf_energies - path to the file with Hartree Fock energies for the given hole
+        path_to_omega - path to the omega.dat file for the given hole (usually in
+        pert folders)
+        path_to_sp_ekin - path to the file with kinetic energies for the given hole from
+        secondphoton folder
+        """
+
+        try:
+            self.binding_energy = self._load_binding_energy_from_HF(path_to_hf_energies)
+            return
+
+        except Exception as e:
+            print(
+                f"{self.name}: Failed to load binding energy from HF energies! Error: {e}"
+            )
+            print("Trying to load binding energy from 2ph kinetic energies...")
+
+        try:
+            self.binding_energy = self._load_binding_energy_from_second_photon(
+                path_to_omega, path_to_sp_ekin
+            )
+            return
+
+        except Exception as e:
+            print(
+                f"{self.name}: Failed to load binding energy from 2ph kinetic energies! Error: {e}"
+            )
+
+        print(f"Warning: binding energy for {self.name} hole is not loaded!")
+
+    def _load_binding_energy_from_HF(self, path_to_hf_energies):
         """
         Loads binding energy for the hole (in Hartee) from the file
         with Hartree Fock energies.
 
         Params:
-        path_to_hf_data - path to the file with Hartree Fock data
+        path_to_hf_energies - path to the file with Hartree Fock energies
+
+        Returns:
+        binding energy for the hole
         """
 
-        path_to_hf_energies = (
-            path_to_hf_data + "hf_energies_kappa_" + str(self.kappa) + ".dat"
-        )
-        hf_energies = np.loadtxt(path_to_hf_energies)
+        hf_energies = load_raw_data(path_to_hf_energies)
         hf_energies_real = hf_energies[:, 0]  # take the real part of HF energies
-        self.binding_energy = -hf_energies_real[self.n - self.l - 1]
+
+        return -hf_energies_real[self.n - self.l - 1]
+
+    def _load_binding_energy_from_second_photon(self, path_to_omega, path_to_sp_ekin):
+        """
+        Loads binding energy for the hole (in Hartee) from the file
+        with kinetic energies in the secondphoton folder.
+
+        Params:
+        path_to_omega - path to the omega.dat file for the given hole (usually in
+        pert folders)
+        path_to_sp_ekin - path to the file with kinetic energies for the given hole from
+        secondphoton folder
+
+        Returns:
+        binding energy for the hole
+        """
+
+        omega = load_raw_data(path_to_omega)
+        sp_ekin = load_raw_data(
+            path_to_sp_ekin
+        )  # kinetic energy from the secondphoton folder
+
+        return omega[0] - sp_ekin[0]
 
 
 def construct_hole_name(atom_name, n_qn, hole_kappa):

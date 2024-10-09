@@ -37,12 +37,12 @@ consider ionization from and load the raw Fortran output data.
 
 In this guide we'll consider ionization from the Radon's 6p_3/2 and 6p_1/2 holes. 
 """
-
 # create an instance
 g_omega_IR = (
     1.55 / g_eV_per_Hartree
 )  # energy of IR photon used in simulations (in Hartree)
-one_photon = OnePhoton("Radon", g_omega_IR)
+atom_name = "Radon"
+one_photon = OnePhoton(atom_name, g_omega_IR)
 
 # specify path to Fortran output data (I use backslash for the path since I work on Windows)
 data_dir = "fortran_data\\2_-4_64_radon\\"
@@ -52,16 +52,6 @@ To load diagonal matrix elements and diagonal eigenvalues (required for e.g. pho
 cross section) we use "load_diag_data" method inside the one_photon object. The method contains 
 "should_reload" parameter that tells wheter we should reinitalize diagonal data if they were
 previously loaded (False by default).
-
-Then we need to initialize some hole objects and load raw data for them. 
-To load a hole we call a method named "load_hole" inside the one_photon object. 
-The Fortran program outputs the probability current for ionisation from a hole to the set of 
-possible final states in the continuum (channels). So, when we load a hole we also add all these 
-"channels". "load_hole" method also contains "should_reload" parameter that tells wheter we 
-should reinitalize a hole if that hole was previously loaded (False by default).
-
-The data for loaded holes are stored in the self.channels dictionary attribute of one_photon object 
-and can be accessed via the "get_channel_for_hole" method.
 """
 
 # load diagonal data
@@ -70,50 +60,63 @@ one_photon.load_diag_data(data_dir)
 # try to reload diagonal data (outputs information message)
 one_photon.load_diag_data(data_dir, should_reload=True)
 
-# path to Hartree Fock data folder for holes' binding energy load
-path_to_hf_data = data_dir + "hf_wavefunctions" + os.path.sep
-
-# initialize 6p_3/2 hole and load its binding energy
+"""
+Then we need to initialize some hole objects before loading them. We can use Hole class from
+common_utility.py. 
+"""
+# initialize 6p_3/2 hole
 hole_kappa_6p3half = -2
 hole_n_6p3half = 6
-binding_energy_6p3half = 0.395  # (in Hartree)
-hole_6p3half = Hole("Radon", hole_kappa_6p3half, hole_n_6p3half)
-hole_6p3half.load_binding_energy(path_to_hf_data)
+hole_6p3half = Hole(atom_name, hole_kappa_6p3half, hole_n_6p3half)
+
+# initialize 6p_1/2 hole
+hole_kappa_6p1half = 1
+hole_n_6p1half = 6
+hole_6p1half = Hole(atom_name, hole_kappa_6p1half, hole_n_6p1half)
+
+
+"""
+To load a hole we call a method named "load_hole" inside the one_photon object. 
+The Fortran program outputs the probability current for ionisation from a hole to the set of 
+possible final states in the continuum (channels). So, when we load a hole we also add all these 
+"channels". Furthermore, "load_hole" method tries to find binding energy for the hole based on
+Hartree Fock energies or electron kinetic energies from the secondphoton folder.
+"load_hole" method also contains "should_reload" parameter that tells wheter we 
+should reinitalize a hole if that hole was previously loaded (False by default).
+
+The data for loaded holes are stored in the self.channels dictionary attribute of one_photon object 
+and can be accessed via the "get_channel_for_hole" method.
+"""
 
 # load 6p_3/2 to one_photon object
-path_to_pcur_6p3half = data_dir + "pert_-2_5\pcur_all.dat"
-path_to_omega_6p3half = data_dir + "pert_-2_5\omega.dat"
-one_photon.load_hole(
-    path_to_pcur_6p3half,
-    hole_6p3half,
-)  # initialize all possible ionization channels and loads raw data for them
+one_photon.load_hole(hole_6p3half, data_dir)
 
 # We can get the labels for all possible inonization channels from 6p_3/2 hole:
 labels_from_6p3half = one_photon.get_channel_labels_for_hole(hole_6p3half)
 print(f"Possible channels for {hole_6p3half.name}: {labels_from_6p3half}")
 
-# initialize 6p_1/2 hole and load its binding energy
-hole_kappa_6p1half = 1
-hole_n_6p1half = 6
-hole_6p1half = Hole("Radon", hole_kappa_6p1half, hole_n_6p1half)
-hole_6p1half.load_binding_energy(path_to_hf_data)
+# We can print binding energy for 6p_3/2
+print(
+    f"Binding energy for {hole_6p3half.name} is {one_photon.get_channel_for_hole(hole_6p3half).hole.binding_energy}"
+)
+
 
 # load 6p_1/2 hole to one_photon object
-path_to_pcur_6p1half = data_dir + "pert_1_5\pcur_all.dat"
-path_to_omega_6p1half = data_dir + "pert_1_5\omega.dat"
-one_photon.load_hole(
-    path_to_pcur_6p1half,
-    hole_6p1half,
-)  # initialize all possible ionization channels and loads raw data for them
+one_photon.load_hole(hole_6p1half, data_dir)
 
 # We can get the labels for all possible inonization channels from 6p_1/2 hole:
 labels_from_6p1half = one_photon.get_channel_labels_for_hole(hole_6p1half)
 print(f"Possible channels for {hole_6p1half.name}: {labels_from_6p1half}")
 
+# We can print binding energy for 6p_1/2
+print(
+    f"Binding energy for {hole_6p1half.name} is {one_photon.get_channel_for_hole(hole_6p1half).hole.binding_energy}"
+)
+
 # try to reload 6p_1/2 hole with the same data (outputs information message)
 one_photon.load_hole(
-    path_to_pcur_6p1half,
     hole_6p1half,
+    data_dir,
     should_reload=True,
 )
 
