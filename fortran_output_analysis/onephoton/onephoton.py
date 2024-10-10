@@ -244,6 +244,7 @@ class OnePhoton:
         path_to_amp_all=None,
         path_to_phaseF_all=None,
         path_to_phaseG_all=None,
+        binding_energy=None,
         path_to_hf_energies=None,
         path_to_omega=None,
         path_to_sp_ekin=None,
@@ -263,6 +264,8 @@ class OnePhoton:
         of the wave function
         path_to_phaseG_all - path to file with the phase for smaller relativistic component
         of the wave function
+        binding_energy - binding energy for the hole. Allows you to specify the predifined
+        value for the hole's binding energy instead of loading it from the simulation data.
         path_to_hf_energies - path to the file with Hartree Fock energies for the given hole
         path_to_omega - path to the omega.dat file for the given hole (usually in
         pert folders)
@@ -275,40 +278,23 @@ class OnePhoton:
         is_loaded = self.is_hole_loaded(hole_kappa, n_qn)
 
         if not is_loaded or should_reload:
-            hole = Hole(self.name, hole_kappa, n_qn)  # initialize hole object
+            hole = Hole(
+                self.name, hole_kappa, n_qn, binding_energy=binding_energy
+            )  # initialize hole object
 
             if is_loaded and should_reload:
                 print(f"Reload {hole.name} hole!")
 
-            # specify paths for loading hole's binding energy
-            if path_to_hf_energies is None:
-                path_to_hf_energies = (
-                    path_to_data
-                    + "hf_wavefunctions"
-                    + os.path.sep
-                    + f"hf_energies_kappa_{hole.kappa}.dat"
+            if (
+                not binding_energy
+            ):  # if the value for binding energy hasn't been provided - load it from data
+                self.__load_hole_binding_energy(
+                    hole,
+                    path_to_data,
+                    path_to_hf_energies,
+                    path_to_omega,
+                    path_to_sp_ekin,
                 )
-            if path_to_omega is None:
-                path_to_omega = (
-                    path_to_data
-                    + f"pert_{hole.kappa}_{hole.n - hole.l}"
-                    + os.path.sep
-                    + "omega.dat"
-                )
-            if path_to_sp_ekin is None:
-                path_to_sp_ekin = (
-                    path_to_data
-                    + "second_photon"
-                    + os.path.sep
-                    + f"energy_rpa_{hole.kappa}_{hole.n - hole.l}.dat"
-                )
-
-            # load binding energy for the hole
-            hole._load_binding_energy(
-                path_to_hf_energies,
-                path_to_omega=path_to_omega,
-                path_to_sp_ekin=path_to_sp_ekin,
-            )
 
             # If the paths to the pcur, amplitude and phase files were not specified we assume
             # that they are in the pert folder.
@@ -333,6 +319,53 @@ class OnePhoton:
                 hole,
             )
             self.num_channels += 1
+
+    @staticmethod
+    def __load_hole_binding_energy(
+        hole: Hole, path_to_data, path_to_hf_energies, path_to_omega, path_to_sp_ekin
+    ):
+        """
+        Prepares paths and loads binding energy for the given hole using Fortran output data.
+
+        Params:
+        hole - object of the Hole class to load binding energy for
+        path_to_data - path to the output folder with Fortran simulation results
+        path_to_hf_energies - path to the file with Hartree Fock energies for the given hole
+        path_to_omega - path to the omega.dat file for the given hole (usually in
+        pert folders)
+        path_to_sp_ekin - path to the file with kinetic energies for the given hole from
+        secondphoton folder
+        """
+
+        # specify paths for loading hole's binding energy
+        if path_to_hf_energies is None:
+            path_to_hf_energies = (
+                path_to_data
+                + "hf_wavefunctions"
+                + os.path.sep
+                + f"hf_energies_kappa_{hole.kappa}.dat"
+            )
+        if path_to_omega is None:
+            path_to_omega = (
+                path_to_data
+                + f"pert_{hole.kappa}_{hole.n - hole.l}"
+                + os.path.sep
+                + "omega.dat"
+            )
+        if path_to_sp_ekin is None:
+            path_to_sp_ekin = (
+                path_to_data
+                + "second_photon"
+                + os.path.sep
+                + f"energy_rpa_{hole.kappa}_{hole.n - hole.l}.dat"
+            )
+
+        # load binding energy for the hole
+        hole._load_binding_energy(
+            path_to_hf_energies,
+            path_to_omega=path_to_omega,
+            path_to_sp_ekin=path_to_sp_ekin,
+        )
 
     def is_hole_loaded(self, n_qn, hole_kappa):
         """

@@ -61,12 +61,14 @@ def get_one_photon_directory_metadata(data_dir):
 #
 # ==================================================================================================
 class Hole:
-    def __init__(self, atom_name, kappa, n_qn):
+    def __init__(self, atom_name, kappa, n_qn, binding_energy=None):
         """
         Params:
         atom_name - name of the parent atom
         kappa - kappa value of the hole
         n_qn - pricnipal quantum number of the hole
+        binding_energy - binding energy for the hole. Allows you to specify the predifined
+        value for the hole's binding energy instead of loading it from the simulation data.
         """
         self.atom_name = atom_name
         self.kappa = kappa
@@ -74,7 +76,7 @@ class Hole:
         self.l = l_from_kappa(kappa)
         self.j = j_from_kappa(kappa)
         self.name = construct_hole_name(atom_name, n_qn, kappa)
-        self.binding_energy = None  # binding energy in Hartree
+        self.binding_energy = binding_energy  # binding energy in Hartree
 
     def _load_binding_energy(
         self, path_to_hf_energies, path_to_omega=None, path_to_sp_ekin=None
