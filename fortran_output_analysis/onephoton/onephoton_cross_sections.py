@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import math
 from scipy.special import legendre
 from fortran_output_analysis.constants_and_parameters import (
@@ -31,7 +30,8 @@ OnePhoton object.
 
 def get_partial_integrated_cross_section_1_channel(
     one_photon: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     final_kappa,
     mode="pcur",
     divide_omega=True,
@@ -47,7 +47,8 @@ def get_partial_integrated_cross_section_1_channel(
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     final_kappa - kappa value of the final state
     mode - "pcur" or "amp". "pcur" means calculation from the probability current, "amp" means
     calculcation from matrix amplitudes
@@ -64,21 +65,21 @@ def get_partial_integrated_cross_section_1_channel(
         mode == "amp"
     ), "mode parameter can only take 'pcur' or 'amp' values"
 
-    one_photon.assert_final_kappa(hole, final_kappa)
+    one_photon.assert_final_kappa(n_qn, hole_kappa, final_kappa)
 
-    channel = one_photon.get_channel_for_hole(hole)
+    channels = one_photon.get_channels_for_hole(n_qn, hole_kappa)
 
-    omega = get_omega_Hartree(one_photon, hole)
+    omega = get_omega_Hartree(one_photon, n_qn, hole_kappa)
 
     if mode == "pcur":
-        rate = channel.get_rate_for_channel(final_kappa)
+        rate = channels.get_rate_for_channel(final_kappa)
         cross_section = convert_rate_to_cross_section(rate, omega, divide_omega)
     else:
-        ekin = get_electron_kinetic_energy_Hartree(one_photon, hole)
+        ekin = get_electron_kinetic_energy_Hartree(one_photon, n_qn, hole_kappa)
         k = wavenumber(ekin, relativistic=relativistic)  # wavenumber vector
-        final_state = channel.final_states[final_kappa]
+        final_state = channels.final_states[final_kappa]
         column_index = final_state.pcur_column_index
-        amp_data = channel.raw_amp_data[:, column_index]
+        amp_data = channels.raw_amp_data[:, column_index]
         amp_data = np.nan_to_num(
             amp_data, nan=0.0, posinf=0.0, neginf=0.0
         )  # replace all nan or inf values with 0.0
@@ -87,7 +88,7 @@ def get_partial_integrated_cross_section_1_channel(
         )
 
     ekin_eV = get_electron_kinetic_energy_eV(
-        one_photon, hole
+        one_photon, n_qn, hole_kappa
     )  # electron kinetic energy in eV
 
     return ekin_eV, cross_section
@@ -95,7 +96,8 @@ def get_partial_integrated_cross_section_1_channel(
 
 def get_partial_integrated_cross_section_multiple_channels(
     one_photon: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     final_kappas,
     mode="pcur",
     divide_omega=True,
@@ -106,7 +108,8 @@ def get_partial_integrated_cross_section_multiple_channels(
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     final_kappas - array with kappa values of the final states
     mode - "pcur" or "amp". "pcur" means calculation from the probability current, "amp" means
     calculcation from matrix amplitudes
@@ -122,16 +125,17 @@ def get_partial_integrated_cross_section_multiple_channels(
         mode == "amp"
     ), "mode parameter can only take 'pcur' or 'amp' values"
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    ekin_eV = get_electron_kinetic_energy_eV(one_photon, hole)
+    ekin_eV = get_electron_kinetic_energy_eV(one_photon, n_qn, hole_kappa)
     cross_section = np.zeros(len(ekin_eV))
 
     for final_kappa in final_kappas:
-        one_photon.assert_final_kappa(hole, final_kappa)
+        one_photon.assert_final_kappa(n_qn, hole_kappa, final_kappa)
         _, channel_cs = get_partial_integrated_cross_section_1_channel(
             one_photon,
-            hole,
+            n_qn,
+            hole_kappa,
             final_kappa,
             mode=mode,
             divide_omega=divide_omega,
@@ -144,7 +148,8 @@ def get_partial_integrated_cross_section_multiple_channels(
 
 def get_total_integrated_cross_section_for_hole(
     one_photon: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     mode="pcur",
     divide_omega=True,
     relativistic=True,
@@ -155,7 +160,8 @@ def get_total_integrated_cross_section_for_hole(
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     mode - "pcur" or "amp". "pcur" means calculation from the probability current, "amp" means
     calculcation from matrix amplitudes
     divide_omega - in "pcur" mode tells if we divide or multiply by the photon energy (omega) when
@@ -170,15 +176,16 @@ def get_total_integrated_cross_section_for_hole(
         mode == "amp"
     ), "mode parameter can only take 'pcur' or 'amp' values"
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    channel = one_photon.get_channel_for_hole(hole)
+    channels = one_photon.get_channels_for_hole(n_qn, hole_kappa)
 
-    final_kappas = list(channel.final_states.keys())
+    final_kappas = list(channels.final_states.keys())
 
     ekin_eV, total_cs = get_partial_integrated_cross_section_multiple_channels(
         one_photon,
-        hole,
+        n_qn,
+        hole_kappa,
         final_kappas,
         mode=mode,
         divide_omega=divide_omega,
@@ -259,21 +266,22 @@ def get_integrated_photoelectron_emission_cross_section(
         mode_cs == "amp"
     ), "mode_cs parameter can only take 'pcur' or 'amp' values"
 
-    loaded_holes = list(one_photon.channels.keys())
+    all_channels = one_photon.get_all_channels()
+    loaded_holes = list(all_channels.keys())
 
     assert (
         len(loaded_holes) > 0
     ), f"No holes are loaded in {one_photon.name}. Please, load at least one hole!"
 
-    first_hole = one_photon.channels[loaded_holes[0]].hole
+    first_hole = one_photon.get_hole_object(loaded_holes[0][0], loaded_holes[0][1])
 
     if mode_energies == "ekin":
         energy_first = get_electron_kinetic_energy_eV(
-            one_photon, first_hole
+            one_photon, first_hole.n, first_hole.kappa
         )  # energy vector of the first hole
     else:
         energy_first = get_omega_eV(
-            one_photon, first_hole
+            one_photon, first_hole.n, first_hole.kappa
         )  # energy vector of the first hole
 
     N_energy = len(energy_first)  # length of the energy vetor
@@ -293,10 +301,11 @@ def get_integrated_photoelectron_emission_cross_section(
         emission_cs = np.zeros(N_energy)
 
     for i in range(N_holes):
-        hole = one_photon.channels[loaded_holes[i]].hole
+        hole = one_photon.get_hole_object(loaded_holes[i][0], loaded_holes[i][1])
         ekin, hole_cs = get_total_integrated_cross_section_for_hole(
             one_photon,
-            hole,
+            hole.n,
+            hole.kappa,
             mode=mode_cs,
             divide_omega=divide_omega,
             relativistic=relativistic,
@@ -356,13 +365,16 @@ def interploate_photoelectron_emission_cross_section(
     return ekin_final, emission_cs_interpolated
 
 
-def get_angular_part_of_cross_section(one_photon: OnePhoton, hole: Hole, Z, angle):
+def get_angular_part_of_cross_section(
+    one_photon: OnePhoton, n_qn, hole_kappa, Z, angle
+):
     """
     Computes angular part of the total cross section for the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     angle - angle to compute cross section
 
@@ -371,9 +383,9 @@ def get_angular_part_of_cross_section(one_photon: OnePhoton, hole: Hole, Z, angl
     angular_part - angular part of the cross section
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    ekin_eV, b2_real = get_real_asymmetry_parameter(one_photon, hole, Z)
+    ekin_eV, b2_real = get_real_asymmetry_parameter(one_photon, n_qn, hole_kappa, Z)
 
     angular_part = 1 + b2_real * legendre(2)(
         np.array(np.cos(math.radians(angle)))
@@ -384,7 +396,8 @@ def get_angular_part_of_cross_section(one_photon: OnePhoton, hole: Hole, Z, angl
 
 def get_total_cross_section_for_hole(
     one_photon: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     angle,
     mode="pcur",
@@ -397,7 +410,8 @@ def get_total_cross_section_for_hole(
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     angle - angle to compute cross section
     mode - for calculation of the integrated part: "pcur" or "amp".
@@ -414,13 +428,14 @@ def get_total_cross_section_for_hole(
 
     _, integrated_part = get_total_integrated_cross_section_for_hole(
         one_photon,
-        hole,
+        n_qn,
+        hole_kappa,
         mode=mode,
         divide_omega=divide_omega,
         relativistic=relativistic,
     )
     ekin_eV, angular_part = get_angular_part_of_cross_section(
-        one_photon, hole, Z, angle
+        one_photon, n_qn, hole_kappa, Z, angle
     )
 
     return ekin_eV, integrated_part * angular_part

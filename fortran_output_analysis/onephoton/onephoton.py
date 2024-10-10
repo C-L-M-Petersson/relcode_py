@@ -8,6 +8,7 @@ from fortran_output_analysis.common_utility import (
     Hole,
     load_raw_data,
     l_to_str,
+    construct_hole_name,
 )
 
 
@@ -30,7 +31,7 @@ class FinalState:
         self.pcur_column_index = pcur_col_idx
 
 
-# TODO: return to the passing hole arguments as n_qn and kappa instead of the hole object
+# TODO: Protect self.__channels in OnePhoton and self.final_states in Channels with Property
 
 
 class Channels:
@@ -149,7 +150,7 @@ class OnePhoton:
 
         # attributes for holes' data
         self.name = atom_name
-        self.channels = {}
+        self.__channels = {}
         self.num_channels = 0
 
         # energy of the IR photon used in Fortran simulations (in Hartree)
@@ -236,7 +237,8 @@ class OnePhoton:
 
     def load_hole(
         self,
-        hole: Hole,
+        n_qn,
+        hole_kappa,
         path_to_data,
         path_to_pcur_all=None,
         path_to_amp_all=None,
@@ -251,7 +253,8 @@ class OnePhoton:
         Initializes hole, corresponding ionization channels and loads data for them.
 
         Params:
-        hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
         path_to_data - path to the output folder with Fortran simulation results
         path_to_pcur_all - path to file with probabilty current for one photon
         hole - object of the Hole class containing hole's parameters
@@ -269,14 +272,13 @@ class OnePhoton:
         loaded
         """
 
-        is_loaded = self.is_hole_loaded(hole)
+        is_loaded = self.is_hole_loaded(hole_kappa, n_qn)
 
         if not is_loaded or should_reload:
+            hole = Hole(self.name, hole_kappa, n_qn)  # initialize hole object
+
             if is_loaded and should_reload:
                 print(f"Reload {hole.name} hole!")
-
-            # TODO: When returning to the passing hole arguments as n_qn and kappa instead
-            # of the hole object, the hole should be initialized here!
 
             # specify paths for loading hole's binding energy
             if path_to_hf_energies is None:
@@ -323,12 +325,7 @@ class OnePhoton:
             if path_to_phaseG_all is None:
                 path_to_phaseG_all = pert_path + "phaseG_all.dat"
 
-            n_qn, hole_kappa = (
-                hole.n,
-                hole.kappa,
-            )  # principal quant. number and kappa of the hole
-
-            self.channels[(n_qn, hole_kappa)] = Channels(
+            self.__channels[(n_qn, hole_kappa)] = Channels(
                 path_to_pcur_all,
                 path_to_amp_all,
                 path_to_phaseF_all,
@@ -337,120 +334,132 @@ class OnePhoton:
             )
             self.num_channels += 1
 
-    def is_hole_loaded(self, hole: Hole):
+    def is_hole_loaded(self, n_qn, hole_kappa):
         """
-        Checks if the hole is loaded (contained in self.channels)
+        Checks if the hole is loaded (contained in self.__channels)
 
         Params:
-        hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
 
         Returns:
         True if loaded, False otherwise.
         """
 
-        assert (
-            hole.atom_name == self.name
-        ), f"The hole {hole.name} is not for {self.name} atom!"
+        return (n_qn, hole_kappa) in self.__channels
 
-        n_qn, hole_kappa = (
-            hole.n,
-            hole.kappa,
-        )  # principal quant. number and kappa of the hole
-
-        return (n_qn, hole_kappa) in self.channels
-
-    def assert_hole_load(self, hole: Hole):
+    def assert_hole_load(self, n_qn, hole_kappa):
         """
         Assertion that the hole was loaded.
 
         Params:
         hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
         """
 
-        assert self.is_hole_loaded(hole), f"The {hole.name} hole is not loaded!"
+        assert self.is_hole_loaded(
+            n_qn, hole_kappa
+        ), f"The {construct_hole_name(self.name, n_qn, hole_kappa)} hole is not loaded!"
 
-    def get_channel_for_hole(self, hole: Hole):
+    def get_channels_for_hole(self, n_qn, hole_kappa):
         """
-        Returns channel from self.channels for the given hole.
+        Returns ionization channels from self.__channels for the given hole.
 
         Params:
-        hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
 
         Returns:
         channel - channel for the given hole
         """
 
-        self.assert_hole_load(hole)
+        self.assert_hole_load(n_qn, hole_kappa)
 
-        n_qn, hole_kappa = (
-            hole.n,
-            hole.kappa,
-        )  # principal quantum number and kappa value of the hole
-
-        channel = self.channels[(n_qn, hole_kappa)]
+        channel = self.__channels[(n_qn, hole_kappa)]
 
         return channel
 
-    def assert_final_kappa(self, hole: Hole, final_kappa):
+    def get_all_channels(self):
+        """
+        Returns self.__channels
+        """
+
+        return self.__channels
+
+    def get_hole_object(self, n_qn, hole_kappa):
+        """
+        Returns the Hole object corresponding to the particular channels in self.__channels.
+
+        Params:
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
+
+        Returns:
+        hole - Hole object for the given channels
+        """
+
+        self.assert_hole_load(n_qn, hole_kappa)
+
+        channels = self.get_channels_for_hole(n_qn, hole_kappa)
+        hole = channels.hole
+
+        return hole
+
+    def assert_final_kappa(self, n_qn, hole_kappa, final_kappa):
         """
         Assertion of the final state. Checks if the given final state
         is within possible ionization channels for the given hole.
 
         Params:
-        hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
         final_kappa - kappa value of the final state
         """
 
         assert self.check_final_kappa(
-            hole, final_kappa
-        ), f"The final state with kappa {final_kappa} is not within channels for {hole.name} hole!"
+            n_qn, hole_kappa, final_kappa
+        ), f"The final state with kappa {final_kappa} is not within channels for {construct_hole_name(self.name, n_qn, hole_kappa)} hole!"
 
-    def check_final_kappa(self, hole: Hole, final_kappa):
+    def check_final_kappa(self, n_qn, hole_kappa, final_kappa):
         """
-        Checks if the given final state is within ionization channels of the given initial hole.
+        Checks if the given final state is within ionization channels of the given hole.
 
         Params:
-        hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
         final_kappa - kappa value of the final state
 
         Returns:
         True if the final state is within ionization channels, False otherwise.
         """
 
-        self.assert_hole_load(hole)
+        self.assert_hole_load(n_qn, hole_kappa)
 
-        n_qn, hole_kappa = (
-            hole.n,
-            hole.kappa,
-        )  # principal quant. number and kappa of the hole
+        channels = self.get_channels_for_hole(n_qn, hole_kappa)
 
-        channel = self.channels[(n_qn, hole_kappa)]
+        return final_kappa in channels.final_states
 
-        return final_kappa in channel.final_states
-
-    def get_channel_labels_for_hole(self, hole: Hole):
+    def get_channel_labels_for_hole(self, n_qn, hole_kappa):
         """
         Constructs labels for all ionization channels of the given hole.
 
         Params:
-        hole - object of the Hole class containing hole's parameters
+        n_qn - principal quantum number of the hole
+        hole_kappa - kappa value of the hole
 
         Returns:
         channel_labels - list with labels of all ionization channels
         """
 
-        self.assert_hole_load(hole)
-
-        n_qn, hole_kappa = (
-            hole.n,
-            hole.kappa,
-        )  # principal quant. number and kappa of the hole
+        self.assert_hole_load(n_qn, hole_kappa)
 
         channel_labels = []
-        channel = self.channels[(n_qn, hole_kappa)]
+        channels = self.get_channels_for_hole(n_qn, hole_kappa)
+        hole = self.get_hole_object(n_qn, hole_kappa)
         hole_name = hole.name
-        for final_state_key in channel.final_states.keys():
-            final_state = channel.final_states[final_state_key]
+        for final_state_key in channels.final_states.keys():
+            final_state = channels.final_states[final_state_key]
             channel_labels.append(hole_name + " to " + final_state.name)
 
         return channel_labels

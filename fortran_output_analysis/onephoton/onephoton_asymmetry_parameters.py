@@ -9,8 +9,6 @@ from fortran_output_analysis.onephoton.onephoton import OnePhoton
 from fortran_output_analysis.onephoton.onephoton_utilities import (
     get_electron_kinetic_energy_eV,
     get_matrix_elements_with_coulomb_phase,
-    prepare_absorption_and_emission_matrices_1sim,
-    prepare_absorption_and_emission_matrices_2sim,
     get_prepared_matrices,
 )
 
@@ -21,7 +19,7 @@ the OnePhoton object.
 
 
 def one_photon_asymmetry_parameter(
-    hole: Hole,
+    hole_kappa,
     M1,
     M2,
     abs_emi_or_cross,
@@ -53,7 +51,7 @@ def one_photon_asymmetry_parameter(
     as M2 and specify abs_emi_or_cross as "cross".
 
     Params:
-    hole - object of the Hole class containing hole's parameters
+    hole_kappa - kappa value of the hole
     M1, M2 - either the same one photon matrix or two matrices matched for emission and
     absoprtion paths
     abs_emi_or_cross - specify "abs" or "emi" when provide the same matrix and "cross"
@@ -85,12 +83,12 @@ def one_photon_asymmetry_parameter(
 
     # Try opening the needed file.
     try:
-        with open(path + f"asymmetry_coeffs_2_{hole.kappa}.txt", "r") as coeffs_file:
+        with open(path + f"asymmetry_coeffs_2_{hole_kappa}.txt", "r") as coeffs_file:
             coeffs_file_contents = coeffs_file.readlines()
     except OSError as e:
         print(e)
         raise NotImplementedError(
-            f"The hole kappa {hole.kappa} is not yet implemented, or the file containing the coefficients could not be found!"
+            f"The hole kappa {hole_kappa} is not yet implemented, or the file containing the coefficients could not be found!"
         )
 
     # Read in the coefficients in front of all the different combinations of matrix elements in the numerator.
@@ -131,13 +129,14 @@ def one_photon_asymmetry_parameter(
     return parameter, label
 
 
-def get_real_asymmetry_parameter(one_photon: OnePhoton, hole: Hole, Z):
+def get_real_asymmetry_parameter(one_photon: OnePhoton, n_qn, hole_kappa, Z):
     """
     Computes real asymmetry parameter.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
 
     Returns:
@@ -145,13 +144,13 @@ def get_real_asymmetry_parameter(one_photon: OnePhoton, hole: Hole, Z):
     b2_real - values of the real asymmetry parameter
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    ekin_eV = get_electron_kinetic_energy_eV(one_photon, hole)
+    ekin_eV = get_electron_kinetic_energy_eV(one_photon, n_qn, hole_kappa)
 
-    M = get_matrix_elements_with_coulomb_phase(one_photon, hole, Z)
+    M = get_matrix_elements_with_coulomb_phase(one_photon, n_qn, hole_kappa, Z)
     b2_real, _ = one_photon_asymmetry_parameter(
-        hole, M, M, "abs"
+        hole_kappa, M, M, "abs"
     )  # one-photon real assymetry parameter
 
     return ekin_eV, b2_real
@@ -159,7 +158,8 @@ def get_real_asymmetry_parameter(one_photon: OnePhoton, hole: Hole, Z):
 
 def get_complex_asymmetry_parameter(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     one_photon_2: Optional[OnePhoton] = None,
     steps_per_IR_photon=None,
@@ -172,9 +172,11 @@ def get_complex_asymmetry_parameter(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to the first simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     one_photon_2 - object of the OnePhoton class specified if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -190,7 +192,8 @@ def get_complex_asymmetry_parameter(
 
     ekin_eV, M_emi_matched, M_abs_matched = get_prepared_matrices(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         one_photon_2=one_photon_2,
         steps_per_IR_photon=steps_per_IR_photon,
@@ -198,7 +201,7 @@ def get_complex_asymmetry_parameter(
     )
 
     b2_complex, _ = one_photon_asymmetry_parameter(
-        hole, M_emi_matched, M_abs_matched, "cross"
+        hole_kappa, M_emi_matched, M_abs_matched, "cross"
     )
 
     return ekin_eV, b2_complex

@@ -3,7 +3,6 @@ from typing import Optional
 from fortran_output_analysis.constants_and_parameters import g_eV_per_Hartree
 
 from fortran_output_analysis.common_utility import (
-    Hole,
     coulomb_phase,
     final_energies_for_matching_1sim,
     match_matrix_elements_1sim,
@@ -18,133 +17,146 @@ analysis (e.g. in analysis of cross sections, asymmetry parameters, delays).
 """
 
 
-def get_omega_eV(one_photon: OnePhoton, hole: Hole):
+def get_omega_eV(one_photon: OnePhoton, n_qn, hole_kappa):
     """
     Returns array of XUV photon energies in eV for the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
 
     Returns:
     array of XUV photon energies in eV for the given hole
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    return get_omega_Hartree(one_photon, hole) * g_eV_per_Hartree
+    return get_omega_Hartree(one_photon, n_qn, hole_kappa) * g_eV_per_Hartree
 
 
-def get_omega_Hartree(one_photon: OnePhoton, hole: Hole):
+def get_omega_Hartree(one_photon: OnePhoton, n_qn, hole_kappa):
     """
     Returns array of XUV photon energies in Hartree for the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
 
     Returns:
     omega_Hartree - array of XUV photon energies in Hartree for the given hole
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    channel = one_photon.get_channel_for_hole(hole)
+    channels = one_photon.get_channels_for_hole(n_qn, hole_kappa)
 
-    omega_Hartree = channel.raw_data[
+    omega_Hartree = channels.raw_data[
         :, 0
     ]  # omega energies in Hartree from the output file.
 
     return omega_Hartree
 
 
-def get_electron_kinetic_energy_Hartree(one_photon: OnePhoton, hole: Hole):
+def get_electron_kinetic_energy_Hartree(one_photon: OnePhoton, n_qn, hole_kappa):
     """
     Returns array of electron kinetic energies in Hartree for the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
 
     Returns:
     array of electron kinetic energies in Hartree for the given hole
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
+
+    hole = one_photon.get_hole_object(n_qn, hole_kappa)
 
     if not hole.binding_energy:
         raise RuntimeError(f"The binding energy for {hole.name} is not initialized!")
 
-    return get_omega_Hartree(one_photon, hole) - hole.binding_energy
+    return get_omega_Hartree(one_photon, n_qn, hole_kappa) - hole.binding_energy
 
 
-def get_electron_kinetic_energy_eV(one_photon: OnePhoton, hole: Hole):
+def get_electron_kinetic_energy_eV(one_photon: OnePhoton, n_qn, hole_kappa):
     """
     Returns array of electron kinetic energies in eV for the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
 
     Returns:
     array of electron kinetic energies in eV for the given hole
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    return get_electron_kinetic_energy_Hartree(one_photon, hole) * g_eV_per_Hartree
+    return (
+        get_electron_kinetic_energy_Hartree(one_photon, n_qn, hole_kappa)
+        * g_eV_per_Hartree
+    )
 
 
-def get_matrix_elements_for_final_state(one_photon: OnePhoton, hole: Hole, final_kappa):
+def get_matrix_elements_for_final_state(
+    one_photon: OnePhoton, n_qn, hole_kappa, final_kappa
+):
     """
     Computes matrix elements after one photon as amp*[e^(i*phase_of_F),
     e^(i*phase_of_G)] for the given hole and final state.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     final_kappa - kappa value of the final state
 
     Returns:
     matrix elements after one photon
     """
 
-    one_photon.assert_final_kappa(hole, final_kappa)
+    one_photon.assert_final_kappa(n_qn, hole_kappa, final_kappa)
 
-    channel = one_photon.get_channel_for_hole(hole)
-    final_state = channel.final_states[final_kappa]
+    channels = one_photon.get_channels_for_hole(n_qn, hole_kappa)
+    final_state = channels.final_states[final_kappa]
     # We assume that the data is sorted the same in amp_all and phaseF_all as in pcur_all
     # this is true at time of writing (2022-05-23).
     column_index = final_state.pcur_column_index
-    return channel.raw_amp_data[:, column_index] * [
-        np.exp(1j * channel.raw_phaseF_data[:, column_index]),
-        np.exp(1j * channel.raw_phaseG_data[:, column_index]),
+    return channels.raw_amp_data[:, column_index] * [
+        np.exp(1j * channels.raw_phaseF_data[:, column_index]),
+        np.exp(1j * channels.raw_phaseG_data[:, column_index]),
     ]
 
 
-def get_matrix_elements_for_all_final_states(one_photon: OnePhoton, hole: Hole):
+def get_matrix_elements_for_all_final_states(one_photon: OnePhoton, n_qn, hole_kappa):
     """
     Computes matrix elements for all possible final states of the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
 
     Returns:
     M - matrix elements
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    channel = one_photon.get_channel_for_hole(hole)
-    final_kappas = channel.final_kappas(hole.kappa, only_reachable=True)
+    channels = one_photon.get_channels_for_hole(n_qn, hole_kappa)
+    final_kappas = channels.final_kappas(hole_kappa, only_reachable=True)
 
     # the first kappa from the final_kappas list
     first_of_final_kappas = final_kappas[0]
 
     # [0] since we are only interested in the largest relativistic component
     matrix_elements = get_matrix_elements_for_final_state(
-        one_photon, hole, first_of_final_kappas
+        one_photon, n_qn, hole_kappa, first_of_final_kappas
     )[0]
 
     M = np.zeros(
@@ -154,30 +166,33 @@ def get_matrix_elements_for_all_final_states(one_photon: OnePhoton, hole: Hole):
 
     for i in range(1, len(final_kappas)):
         final_kappa = final_kappas[i]
-        M[i, :] = get_matrix_elements_for_final_state(one_photon, hole, final_kappa)[0]
+        M[i, :] = get_matrix_elements_for_final_state(
+            one_photon, n_qn, hole_kappa, final_kappa
+        )[0]
 
     return M
 
 
-def get_coulomb_phase(one_photon: OnePhoton, hole: Hole, Z):
+def get_coulomb_phase(one_photon: OnePhoton, n_qn, hole_kappa, Z):
     """
     Computes Coulomb phase for all the final states of the given hole.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
 
     Returns:
     coulomb_phase_arr - array with Coulomb phases
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    channel = one_photon.get_channel_for_hole(hole)
-    final_kappas = channel.final_kappas(hole.kappa, only_reachable=True)
+    channels = one_photon.get_channels_for_hole(n_qn, hole_kappa)
+    final_kappas = channels.final_kappas(hole_kappa, only_reachable=True)
 
-    ekin = get_electron_kinetic_energy_Hartree(one_photon, hole)
+    ekin = get_electron_kinetic_energy_Hartree(one_photon, n_qn, hole_kappa)
     coulomb_phase_arr = np.zeros(
         (len(final_kappas), len(ekin))
     )  # vector to store coulomb phase
@@ -189,24 +204,25 @@ def get_coulomb_phase(one_photon: OnePhoton, hole: Hole, Z):
     return coulomb_phase_arr
 
 
-def get_matrix_elements_with_coulomb_phase(one_photon: OnePhoton, hole: Hole, Z):
+def get_matrix_elements_with_coulomb_phase(one_photon: OnePhoton, n_qn, hole_kappa, Z):
     """
     Computes matrix elements for all possible final states of the given hole
     and adds Coulomb phase to them.
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
 
     Returns:
     Matrix elements with Coulomb phase
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    M = get_matrix_elements_for_all_final_states(one_photon, hole)
-    coul_phase = get_coulomb_phase(one_photon, hole, Z)  # Coulomb phase
+    M = get_matrix_elements_for_all_final_states(one_photon, n_qn, hole_kappa)
+    coul_phase = get_coulomb_phase(one_photon, n_qn, hole_kappa, Z)  # Coulomb phase
 
     assert (
         M.shape == coul_phase.shape
@@ -216,7 +232,7 @@ def get_matrix_elements_with_coulomb_phase(one_photon: OnePhoton, hole: Hole, Z)
 
 
 def prepare_absorption_and_emission_matrices_1sim(
-    one_photon: OnePhoton, hole: Hole, Z, steps_per_IR_photon=None
+    one_photon: OnePhoton, n_qn, hole_kappa, Z, steps_per_IR_photon=None
 ):
     """
     Works with the case of 1 simulation (only 1 OnePhoton object). Constructs absorption and
@@ -225,7 +241,8 @@ def prepare_absorption_and_emission_matrices_1sim(
 
     Params:
     one_photon - object of the OnePhoton class with some loaded holes
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     steps_per_IR_photon - the number of XUV energy steps fitted in the IR photon energy.
     If not specified, the the program calculates it based on the XUV energy data in the
@@ -237,9 +254,9 @@ def prepare_absorption_and_emission_matrices_1sim(
     M_abs_matched - matrix elements for absorption path matched to the final energies
     """
 
-    one_photon.assert_hole_load(hole)
+    one_photon.assert_hole_load(n_qn, hole_kappa)
 
-    ekin_eV = get_electron_kinetic_energy_eV(one_photon, hole)
+    ekin_eV = get_electron_kinetic_energy_eV(one_photon, n_qn, hole_kappa)
 
     g_omega_IR = one_photon.g_omega_IR  # frequncy of the IR photon (in Hartree)
 
@@ -248,7 +265,7 @@ def prepare_absorption_and_emission_matrices_1sim(
             g_omega_IR / ((ekin_eV[1] - ekin_eV[0]) / g_eV_per_Hartree)
         )
 
-    M = get_matrix_elements_with_coulomb_phase(one_photon, hole, Z)
+    M = get_matrix_elements_with_coulomb_phase(one_photon, n_qn, hole_kappa, Z)
     ekin_final, M_emi_matched, M_abs_matched = (
         match_absorption_and_emission_matrices_1sim(ekin_eV, M, M, steps_per_IR_photon)
     )
@@ -302,7 +319,8 @@ def match_absorption_and_emission_matrices_1sim(
 def prepare_absorption_and_emission_matrices_2sim(
     one_photon_emi: OnePhoton,
     one_photon_abs: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     energies_mode="both",
 ):
@@ -314,7 +332,8 @@ def prepare_absorption_and_emission_matrices_2sim(
     Params:
     one_photon_emi - object of the OnePhoton class for emission matrix
     one_photon_abs - object of the OnePhoton class for absorption matrix
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     energies_mode - tells which energies we take for matrices interpolation. Possible options:
     "emi" - energies from emission object, "abs" - energies from absorption object, "both" -
@@ -326,11 +345,11 @@ def prepare_absorption_and_emission_matrices_2sim(
     M_abs_matched - matrix elements for absorption path matched to the final energies
     """
 
-    one_photon_emi.assert_hole_load(hole)
-    one_photon_abs.assert_hole_load(hole)
+    one_photon_emi.assert_hole_load(n_qn, hole_kappa)
+    one_photon_abs.assert_hole_load(n_qn, hole_kappa)
 
-    ekin_eV_emi = get_electron_kinetic_energy_eV(one_photon_emi, hole)
-    ekin_eV_abs = get_electron_kinetic_energy_eV(one_photon_abs, hole)
+    ekin_eV_emi = get_electron_kinetic_energy_eV(one_photon_emi, n_qn, hole_kappa)
+    ekin_eV_abs = get_electron_kinetic_energy_eV(one_photon_abs, n_qn, hole_kappa)
 
     g_omega_IR_emi = one_photon_emi.g_omega_IR  # frequncy of the IR photon (in Hartree)
     g_omega_IR_abs = one_photon_abs.g_omega_IR
@@ -339,8 +358,8 @@ def prepare_absorption_and_emission_matrices_2sim(
     ekin_eV_emi -= g_omega_IR_emi * g_eV_per_Hartree
     ekin_eV_abs += g_omega_IR_abs * g_eV_per_Hartree
 
-    M_emi = get_matrix_elements_with_coulomb_phase(one_photon_emi, hole, Z)
-    M_abs = get_matrix_elements_with_coulomb_phase(one_photon_abs, hole, Z)
+    M_emi = get_matrix_elements_with_coulomb_phase(one_photon_emi, n_qn, hole_kappa, Z)
+    M_abs = get_matrix_elements_with_coulomb_phase(one_photon_abs, n_qn, hole_kappa, Z)
 
     ekin_final, M_emi_matched, M_abs_matched = (
         match_absorption_and_emission_matrices_2sim(
@@ -404,7 +423,8 @@ def match_absorption_and_emission_matrices_2sim(
 
 def get_prepared_matrices(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     one_photon_2: Optional[OnePhoton] = None,
     steps_per_IR_photon=None,
@@ -416,7 +436,8 @@ def get_prepared_matrices(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
@@ -432,19 +453,28 @@ def get_prepared_matrices(
     M_abs_matched - matrix elements for absorption path matched to the final energies
     """
 
-    one_photon_1.assert_hole_load(hole)
+    one_photon_1.assert_hole_load(n_qn, hole_kappa)
 
     if one_photon_2:  # if the second simulation is provided
-        one_photon_2.assert_hole_load(hole)
+        one_photon_2.assert_hole_load(n_qn, hole_kappa)
         ekin_eV, M_emi_matched, M_abs_matched = (
             prepare_absorption_and_emission_matrices_2sim(
-                one_photon_1, one_photon_2, hole, Z, energies_mode=energies_mode
+                one_photon_1,
+                one_photon_2,
+                n_qn,
+                hole_kappa,
+                Z,
+                energies_mode=energies_mode,
             )
         )
     else:  # if the second simulation is not provided
         ekin_eV, M_emi_matched, M_abs_matched = (
             prepare_absorption_and_emission_matrices_1sim(
-                one_photon_1, hole, Z, steps_per_IR_photon=steps_per_IR_photon
+                one_photon_1,
+                n_qn,
+                hole_kappa,
+                Z,
+                steps_per_IR_photon=steps_per_IR_photon,
             )
         )
 

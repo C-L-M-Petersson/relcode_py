@@ -4,13 +4,11 @@ import math
 from typing import Optional
 from scipy.special import legendre
 from fortran_output_analysis.constants_and_parameters import (
-    g_eV_per_Hartree,
     g_inverse_atomic_frequency_to_attoseconds,
 )
 from fortran_output_analysis.common_utility import (
     delay_to_phase,
     unwrap_phase_with_nans,
-    Hole,
     exported_mathematica_tensor_to_python_list,
     compute_omega_diff,
 )
@@ -27,7 +25,7 @@ the OnePhoton object.
 
 
 def get_wigner_intensity(
-    hole: Hole,
+    hole_kappa,
     M_emi,
     M_abs,
     path=os.path.join(
@@ -43,7 +41,8 @@ def get_wigner_intensity(
     Computes Wigner intensity for a photoelectron that has absorbed one photon.
 
     Params:
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     M_emi - matrix for emission path matched to the same final photoelectron
     energies
     M_abs - matrix for absorption path matched to the same final photoelectron
@@ -64,11 +63,11 @@ def get_wigner_intensity(
         path = path + os.path.sep
 
     try:
-        with open(path + f"integrated_intensity_{hole.kappa}.txt", "r") as coeffs_file:
+        with open(path + f"integrated_intensity_{hole_kappa}.txt", "r") as coeffs_file:
             coeffs_file_contents = coeffs_file.readlines()
     except OSError as e:
         raise NotImplementedError(
-            f"The hole kappa {hole.kappa} is not yet implemented, or the file containing the coefficients could not be found!"
+            f"The hole kappa {hole_kappa} is not yet implemented, or the file containing the coefficients could not be found!"
         )
 
     coeffs = exported_mathematica_tensor_to_python_list(coeffs_file_contents[2])
@@ -82,7 +81,8 @@ def get_wigner_intensity(
 
 def get_integrated_wigner_delay(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     one_photon_2: Optional[OnePhoton] = None,
     steps_per_IR_photon=None,
@@ -95,9 +95,11 @@ def get_integrated_wigner_delay(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -112,7 +114,8 @@ def get_integrated_wigner_delay(
 
     ekin_eV, M_emi_matched, M_abs_matched = get_prepared_matrices(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         one_photon_2=one_photon_2,
         steps_per_IR_photon=steps_per_IR_photon,
@@ -122,7 +125,7 @@ def get_integrated_wigner_delay(
     omega_diff = compute_omega_diff(one_photon_1, photon_object_2=one_photon_2)
 
     tau_int_wigner = integrated_wigner_delay_from_intensity(
-        hole, omega_diff, M_emi_matched, M_abs_matched
+        hole_kappa, omega_diff, M_emi_matched, M_abs_matched
     )
 
     return ekin_eV, tau_int_wigner
@@ -130,7 +133,8 @@ def get_integrated_wigner_delay(
 
 def get_integrated_wigner_phase(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     one_photon_2: Optional[OnePhoton] = None,
     steps_per_IR_photon=None,
@@ -144,9 +148,11 @@ def get_integrated_wigner_phase(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -162,7 +168,8 @@ def get_integrated_wigner_phase(
 
     ekin_eV, tau_int_wigner = get_integrated_wigner_delay(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         one_photon_2=one_photon_2,
         steps_per_IR_photon=steps_per_IR_photon,
@@ -181,7 +188,8 @@ def get_integrated_wigner_phase(
 
 def get_angular_wigner_delay(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     angle,
     one_photon_2: Optional[OnePhoton] = None,
@@ -195,10 +203,12 @@ def get_angular_wigner_delay(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     angle - angle to compute the delay
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -213,7 +223,8 @@ def get_angular_wigner_delay(
 
     ekin_eV, M_emi_matched, M_abs_matched = get_prepared_matrices(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         one_photon_2=one_photon_2,
         steps_per_IR_photon=steps_per_IR_photon,
@@ -223,7 +234,7 @@ def get_angular_wigner_delay(
     omega_diff = compute_omega_diff(one_photon_1, photon_object_2=one_photon_2)
 
     tau_ang_wigner = angular_wigner_delay_from_asymmetry_parameter(
-        hole, omega_diff, M_emi_matched, M_abs_matched, angle
+        hole_kappa, omega_diff, M_emi_matched, M_abs_matched, angle
     )
 
     return ekin_eV, tau_ang_wigner
@@ -231,7 +242,8 @@ def get_angular_wigner_delay(
 
 def get_angular_wigner_phase(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     angle,
     one_photon_2: Optional[OnePhoton] = None,
@@ -247,10 +259,12 @@ def get_angular_wigner_phase(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     angle - angle to compute phase
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -266,7 +280,8 @@ def get_angular_wigner_phase(
 
     ekin_eV, tau_ang_wigner = get_angular_wigner_delay(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         angle,
         one_photon_2=one_photon_2,
@@ -286,7 +301,8 @@ def get_angular_wigner_phase(
 
 def get_wigner_delay(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     angle,
     one_photon_2: Optional[OnePhoton] = None,
@@ -300,10 +316,12 @@ def get_wigner_delay(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     angle - angle to compute the delay
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -318,7 +336,8 @@ def get_wigner_delay(
 
     ekin_eV, M_emi_matched, M_abs_matched = get_prepared_matrices(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         one_photon_2=one_photon_2,
         steps_per_IR_photon=steps_per_IR_photon,
@@ -328,11 +347,11 @@ def get_wigner_delay(
     omega_diff = compute_omega_diff(one_photon_1, photon_object_2=one_photon_2)
 
     tau_int_wigner = integrated_wigner_delay_from_intensity(
-        hole, omega_diff, M_emi_matched, M_abs_matched
+        hole_kappa, omega_diff, M_emi_matched, M_abs_matched
     )
 
     tau_ang_wigner = angular_wigner_delay_from_asymmetry_parameter(
-        hole, omega_diff, M_emi_matched, M_abs_matched, angle
+        hole_kappa, omega_diff, M_emi_matched, M_abs_matched, angle
     )
 
     tau_wigner = tau_int_wigner + tau_ang_wigner  # total Wigner delay
@@ -342,7 +361,8 @@ def get_wigner_delay(
 
 def get_wigner_phase(
     one_photon_1: OnePhoton,
-    hole: Hole,
+    n_qn,
+    hole_kappa,
     Z,
     angle,
     one_photon_2: Optional[OnePhoton] = None,
@@ -355,10 +375,12 @@ def get_wigner_phase(
 
     Params:
     one_photon_1 - object of the OnePhoton class corresponding to one simulation
-    hole - object of the Hole class containing hole's parameters
+    n_qn - principal quantum number of the hole
+    hole_kappa - kappa value of the hole
     Z - charge of the ion
     angle - angle to compute the delay
     one_photon_2 - second object of the OnePhoton class if we want to consider 2 simulations
+    (first for emission, second for absorption)
     steps_per_IR_photon - Required for 1 simulation only. Represents the number of XUV energy
     steps fitted in the IR photon energy. If not specified, the the program calculates it based
     on the XUV energy data in the omega.dat file and value of the IR photon energy.
@@ -374,7 +396,8 @@ def get_wigner_phase(
 
     ekin_eV, tau_wigner = get_wigner_delay(
         one_photon_1,
-        hole,
+        n_qn,
+        hole_kappa,
         Z,
         angle,
         one_photon_2=one_photon_2,
@@ -393,13 +416,13 @@ def get_wigner_phase(
 
 
 def integrated_wigner_delay_from_intensity(
-    hole: Hole, omega_diff, M_emi_matched, M_abs_matched
+    hole_kappa, omega_diff, M_emi_matched, M_abs_matched
 ):
     """
     Computes integrated Wigner delay from Wigner intenisty.
 
     Params:
-    hole - object of the Hole class containing hole's parameters
+    hole_kappa - kappa value of the hole
     omega_diff - energy difference between absorption and emission paths
     M_emi_matched - matrix elements for emission path matched to the final energies
     M_abs_matched - matrix elements for absorption path matched to the final energies
@@ -408,7 +431,7 @@ def integrated_wigner_delay_from_intensity(
     tau_int_wigner - array with integrated Wigner delay
     """
 
-    wigner_intensity = get_wigner_intensity(hole, M_emi_matched, M_abs_matched)
+    wigner_intensity = get_wigner_intensity(hole_kappa, M_emi_matched, M_abs_matched)
 
     tau_int_wigner = (
         g_inverse_atomic_frequency_to_attoseconds
@@ -420,7 +443,7 @@ def integrated_wigner_delay_from_intensity(
 
 
 def angular_wigner_delay_from_asymmetry_parameter(
-    hole: Hole,
+    hole_kappa,
     omega_diff,
     M_emi_matched,
     M_abs_matched,
@@ -430,7 +453,7 @@ def angular_wigner_delay_from_asymmetry_parameter(
     Computes angular part of Wigner delay from the complex assymetry parameter.
 
     Params:
-    hole - object of the Hole class containing hole's parameters
+    hole_kappa - kappa value of the hole
     omega_diff - energy difference between absorption and emission paths
     M_emi_matched - matrix elements for emission path matched to the final energies
     M_abs_matched - matrix elements for absorption path matched to the final energies
@@ -441,7 +464,7 @@ def angular_wigner_delay_from_asymmetry_parameter(
     """
 
     b2_complex, _ = one_photon_asymmetry_parameter(
-        hole, M_emi_matched, M_abs_matched, "cross"
+        hole_kappa, M_emi_matched, M_abs_matched, "cross"
     )  # complex assymetry parameter for one photon case
 
     tau_ang_wigner = (
