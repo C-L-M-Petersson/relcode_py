@@ -31,9 +31,6 @@ class FinalState:
         self.pcur_column_index = pcur_col_idx
 
 
-# TODO: Protect self.__channels in OnePhoton and self.final_states in Channels with Property
-
-
 class Channels:
     """
     Stores inforation about ionization channels for the given hole.

@@ -24,7 +24,6 @@ sys.path.append(relcode_py_repo_path)
 
 # initialize two one_photon objects, the hole and load this hole in both
 from fortran_output_analysis.onephoton.onephoton import OnePhoton
-from fortran_output_analysis.common_utility import Hole
 from fortran_output_analysis.constants_and_parameters import g_eV_per_Hartree
 
 atom_name = "Xenon"
