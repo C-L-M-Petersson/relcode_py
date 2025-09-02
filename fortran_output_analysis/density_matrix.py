@@ -96,3 +96,53 @@ def density_matrix_purity( rho, dE = 1 ):
             The energy step size. Default value 1
     """
     return density_matrix_trace( np.matmul( rho, rho ), dE )*dE
+
+# ==================================================================================================
+#
+# ==================================================================================================
+
+def SchmidtDecomp( rho, lambda_lim = None ):
+    """Returns the Schmidt coefficients S and states U = V^\dagger of the hermitian density matrix rho.
+    Arguments:
+        - rho : [[complex float]]
+            The density matrix.
+
+        - lambda_lim : float (optional)
+            Tolerance values for the singular values lambda, i.e. it filters out states with Schmidt coefficients less than lambda_lim. By default it returns all states.
+    
+    """
+
+    U, S, V = np.linalg.svd(rho, hermitian = True)
+
+    if lambda_lim != None:
+        for i in range(len(S)):
+            if S[i] < lambda_lim:
+                U = U[:, :i]
+                S = S[:i]
+                break
+
+    return S, U
+
+def RhoFromSchmidtDecomp( S, U, idxs = None ):
+    """Returns the density matrix, rho, using the Schmidt coefficients S and states U.
+    Arguments:
+        - S : [float]
+            Vector of Schmidt coefficients.
+    
+        - U : [[complex float]]
+            Matrix containing reduced Schmidt states.
+
+        - idxs : [int] (optional)
+            For reconstructing the density matrix using certain indices instead of the full U and S.
+    """
+
+    if idxs != None:
+
+        rho = np.zeros((len(S), len(S)), dtype = np.complex128)
+        for i in idxs:
+            rho += S[i] * np.outer(U[:, i], np.conj(U[:, i]))
+
+    else:
+        rho = U*S@np.conj(U.T)
+
+    return rho
