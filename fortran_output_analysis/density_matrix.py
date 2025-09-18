@@ -139,12 +139,12 @@ def RhoFromSchmidtDecomp( S, U, idxs = None ):
 
     if idxs != None:
 
-        rho = np.zeros((np.shape(U)[1], np.shape(U)[1]), dtype = np.complex128)
+        rho = np.zeros((np.shape(U)[0], np.shape(U)[0]), dtype = complex)
         for i in idxs:
             rho += S[i] * np.outer(U[:, i], np.conj(U[:, i]))
 
     else:
-        rho = U*S@np.conj(U.T)
+        rho = U@np.diag(S)@np.conj(U.T)
 
     return rho
 
@@ -152,7 +152,7 @@ def RhoFromSchmidtDecomp( S, U, idxs = None ):
 #
 # ==================================================================================================
 
-def SchmidtDFT(State, t, omega, inverse = False):
+def SchmidtDFT( State, t, omega, inverse = False ):
     """Returns the Discrete Fourier Transform for the input Schmidt state.
     Arguments:
         - State : [complex float]
@@ -172,7 +172,7 @@ def SchmidtDFT(State, t, omega, inverse = False):
     omega = np.asarray(omega)
 
     if inverse:
-        
+
         FT = np.zeros(len(t), dtype = complex)
 
         for t_idx, t_value in enumerate(t):
@@ -190,8 +190,8 @@ def SchmidtDFT(State, t, omega, inverse = False):
             FT[omega_idx] = np.trapz(integrand, x = t)
 
         return FT
-    
-def FullSchmidtDFT(U, t, omega, inverse = False):
+
+def FullSchmidtDFT( U, t, omega, inverse = False ):
     """Returns the Discrete Fourier Transform for all Schmidt states in U as coloumn vectors.
     Arguments:
         - U : [[complex float]]
@@ -222,7 +222,7 @@ def FullSchmidtDFT(U, t, omega, inverse = False):
     else:
 
         colU = np.shape(U)[1]
-        U_DFT = np.zeros((len(t), colU), dtype = complex)
+        U_DFT = np.zeros((len(omega), colU), dtype = complex)
 
         for i in range(colU):
             State = U[:, i]
