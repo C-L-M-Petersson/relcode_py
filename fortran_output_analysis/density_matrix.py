@@ -52,8 +52,9 @@ def density_matrix_pure_state( E_kins
 
     rho = np.zeros((len(E_kins),len(E_kins)),dtype=complex)
     for i in range(len(interpolated_mat_elems)):
-        rho[i] = density_matrix_col( interpolated_mat_elems[i] )
+       rho[i] = density_matrix_col( interpolated_mat_elems[i] )
 
+    # rho = np.outer(interpolated_mat_elems, np.conj(interpolated_mat_elems))
     return rho
 
 
@@ -138,7 +139,7 @@ def RhoFromSchmidtDecomp( S, U, idxs = None ):
 
     if idxs != None:
 
-        rho = np.zeros((len(S), len(S)), dtype = np.complex128)
+        rho = np.zeros((np.shape(U)[1], np.shape(U)[1]), dtype = np.complex128)
         for i in idxs:
             rho += S[i] * np.outer(U[:, i], np.conj(U[:, i]))
 
@@ -146,3 +147,86 @@ def RhoFromSchmidtDecomp( S, U, idxs = None ):
         rho = U*S@np.conj(U.T)
 
     return rho
+
+# ==================================================================================================
+#
+# ==================================================================================================
+
+def SchmidtDFT(State, t, omega, inverse = False):
+    """Returns the Discrete Fourier Transform for the input Schmidt state.
+    Arguments:
+        - State : [complex float]
+            Input Schmidt state.
+
+        - t : [float]
+            Time.
+
+        - omega : [float]
+            Frequency.
+
+        - inverse : bool (optional)
+            Choose between DFT and IDFT.
+    """
+
+    t = np.asarray(t)
+    omega = np.asarray(omega)
+
+    if inverse:
+        
+        FT = np.zeros(len(t), dtype = complex)
+
+        for t_idx, t_value in enumerate(t):
+            integrand = State * np.exp(1j * omega * t_value)
+            FT[t_idx] = np.trapz(integrand, x = omega)
+
+        return FT / (2*np.pi)
+
+    else:
+
+        FT = np.zeros(len(omega), dtype = complex)
+
+        for omega_idx, omega_value in enumerate(omega):
+            integrand = State * np.exp(-1j * omega_value * t)
+            FT[omega_idx] = np.trapz(integrand, x = t)
+
+        return FT
+    
+def FullSchmidtDFT(U, t, omega, inverse = False):
+    """Returns the Discrete Fourier Transform for all Schmidt states in U as coloumn vectors.
+    Arguments:
+        - U : [[complex float]]
+            Matrix of Schmidt states. Note: The Schmidt states must be the coloumn vectors of U.
+
+        - t : [float]
+            Time.
+
+        - omega : [float]
+            Frequency.
+
+        - inverse : bool (optional)
+            Choose between DFT and IDFT.
+    """
+
+    if inverse:
+
+        colU = np.shape(U)[1]
+        U_IDFT = np.zeros((len(t), colU), dtype = complex)
+
+        for i in range(colU):
+            State = U[:, i]
+
+            U_IDFT[:, i] = SchmidtDFT(State, t, omega, inverse = True)
+
+        return U_IDFT
+
+    else:
+
+        colU = np.shape(U)[1]
+        U_DFT = np.zeros((len(t), colU), dtype = complex)
+
+        for i in range(colU):
+            State = U[:, i]
+
+            U_DFT[:, i] = SchmidtDFT(State, t, omega)
+
+        return U_DFT
